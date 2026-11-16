@@ -54,7 +54,7 @@
   </style>
 </head>
 
-<body class="bg-surface text-on-surface h-full w-full overflow-hidden select-none">
+<body class="bg-surface text-on-surface h-full w-full overflow-hidden select-none antialiased">
 
   <!-- ========================================== -->
   <!-- 1. LOGIN SCREEN                           -->
@@ -198,7 +198,7 @@
 
             <!-- กล่องข้อความแบบเดิม -->
             <div class="bg-white rounded-2xl border border-outline-variant/30 shadow-xs overflow-hidden transition-all">
-              <button type="button" onclick="toggleTextCustomizerAccordion()" class="w-full p-3.5 flex items-center justify-between hover:bg-surface-container-low">
+              <button type="button" onclick="toggleTextCustomizerAccordion()" class="w-full p-3.5 flex items-center justify-between hover:bg-surface-container-low transition">
                 <div class="flex items-center gap-2">
                   <span class="material-symbols-outlined text-[18px] text-primary">text_fields</span>
                   <span class="text-xs font-bold">พิมพ์ข้อความ / วันที่</span>
@@ -206,8 +206,50 @@
                 <span id="accordion-icon" class="material-symbols-outlined text-outline">expand_less</span>
               </button>
               <div id="text-customizer-content" class="p-3.5 pt-0 space-y-3 block">
-                <textarea id="custom-text-input" rows="2" class="w-full p-2.5 bg-surface-container-low rounded-xl text-xs border border-outline-variant/20 focus:outline-none focus:ring-2 focus:ring-primary resize-y min-h-[50px] max-h-[140px]" placeholder="พิมพ์ข้อความ..."></textarea>
-                <button type="button" onclick="generateAndPlaceTextSignature()" class="w-full py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
+                <textarea id="custom-text-input" rows="2" class="w-full p-2.5 bg-surface-container-low rounded-xl text-xs border border-outline-variant/20 focus:outline-none focus:ring-2 focus:ring-primary resize-y min-h-[50px] max-h-[140px]" placeholder="พิมพ์ชื่อ, ตำแหน่ง หรือข้อความ..."></textarea>
+                
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[10px] text-outline font-medium mb-1">ฟอนต์</label>
+                    <select id="font-family-select" class="w-full p-1.5 bg-surface-container-low rounded-lg text-[11px] border border-outline-variant/20 focus:outline-none text-on-surface">
+                      <option value="'Dancing Script', cursive">ลายมือ (Script)</option>
+                      <option value="'Sarabun', sans-serif">ราชการ (Sarabun)</option>
+                      <option value="'Inter', sans-serif">โมเดิร์น (Inter)</option>
+                      <option value="'Courier New', monospace">พิมพ์ดีด (Mono)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-outline font-medium mb-1">ขนาด</label>
+                    <select id="font-size-select" class="w-full p-1.5 bg-surface-container-low rounded-lg text-[11px] border border-outline-variant/20 focus:outline-none text-on-surface">
+                      <option value="18">เล็ก (18px)</option>
+                      <option value="24" selected>ปานกลาง (24px)</option>
+                      <option value="32">ใหญ่ (32px)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-[10px] text-outline font-medium mb-1">ความหนาตัวอักษร</label>
+                  <div class="grid grid-cols-3 gap-1 bg-surface-container-low p-1 rounded-lg border border-outline-variant/20">
+                    <button type="button" onclick="setFontWeight('300')" id="weight-btn-300" class="py-1 text-[11px] rounded text-outline hover:text-on-surface transition font-light">บาง</button>
+                    <button type="button" onclick="setFontWeight('400')" id="weight-btn-400" class="py-1 text-[11px] rounded text-outline hover:text-on-surface transition font-normal">ปกติ</button>
+                    <button type="button" onclick="setFontWeight('700')" id="weight-btn-700" class="py-1 text-[11px] rounded bg-white text-primary font-bold shadow-xs transition">หนา</button>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                  <div class="flex items-center bg-surface-container-low rounded-lg p-0.5 border border-outline-variant/20">
+                    <button type="button" onclick="setTextAlign('left')" id="align-btn-left" class="p-1 rounded text-outline hover:text-on-surface transition" title="ชิดซ้าย"><span class="material-symbols-outlined text-[16px]">format_align_left</span></button>
+                    <button type="button" onclick="setTextAlign('center')" id="align-btn-center" class="p-1 rounded bg-white text-primary shadow-xs transition" title="ตรงกลาง"><span class="material-symbols-outlined text-[16px]">format_align_center</span></button>
+                    <button type="button" onclick="setTextAlign('right')" id="align-btn-right" class="p-1 rounded text-outline hover:text-on-surface transition" title="ชิดขวา"><span class="material-symbols-outlined text-[16px]">format_align_right</span></button>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <label class="text-[10px] text-outline font-medium">สี:</label>
+                    <input type="color" id="text-color-picker" value="#004ac6" class="w-6 h-6 rounded cursor-pointer border border-outline-variant/30">
+                  </div>
+                </div>
+
+                <button type="button" onclick="generateAndPlaceTextSignature()" class="w-full py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-[0.98]">
                   <span class="material-symbols-outlined text-[16px]">add_location_alt</span> วางข้อความนี้
                 </button>
               </div>
@@ -220,8 +262,11 @@
           </div>
 
           <div class="flex-shrink-0 p-4 bg-surface-container border-t border-outline-variant/10 space-y-2">
-            <button onclick="downloadSignedPdfDocument()" class="w-full h-11 bg-primary text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2 shadow-md hover:bg-primary/90">
+            <button onclick="downloadSignedPdfDocument()" class="w-full h-11 bg-primary text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2 shadow-md hover:bg-primary/90 transition active:scale-[0.98]">
               <span class="material-symbols-outlined text-lg">picture_as_pdf</span> บันทึก / ดาวน์โหลด PDF
+            </button>
+            <button onclick="printSignedDocumentDirectly()" class="w-full h-11 bg-white text-on-surface border border-outline-variant/30 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-surface-container-high transition active:scale-[0.98]">
+              <span class="material-symbols-outlined text-lg text-primary">print</span> สั่งพิมพ์เอกสาร
             </button>
           </div>
         </aside>
@@ -251,12 +296,18 @@
             <button onclick="updateAnalyticsView()" class="px-3 py-1.5 bg-white border rounded-xl text-xs font-semibold text-primary"><span class="material-symbols-outlined text-sm">refresh</span> รีเฟรชข้อมูล</button>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="p-5 bg-white rounded-2xl shadow-xs"><span class="text-xs text-outline font-medium">เอกสารลงนามทั้งหมด</span><p class="text-3xl font-extrabold text-primary" id="stat-signed-count">0 ฉบับ</p></div>
-            <div class="p-5 bg-white rounded-2xl shadow-xs"><span class="text-xs text-outline font-medium">ลายเซ็นทั้งหมดในคลัง</span><p class="text-3xl font-extrabold" id="stat-total-sigs">0 รายการ</p></div>
+            <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20"><span class="text-xs text-outline font-medium">เอกสารลงนามทั้งหมด</span><p class="text-3xl font-extrabold text-primary" id="stat-signed-count">0 ฉบับ</p></div>
+            <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20"><span class="text-xs text-outline font-medium">ลายเซ็นทั้งหมดในคลัง</span><p class="text-3xl font-extrabold" id="stat-total-sigs">0 รายการ</p></div>
           </div>
-          <div class="p-5 bg-white rounded-2xl shadow-xs space-y-4">
+          
+          <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20 space-y-4">
+            <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">corporate_fare</span> จำนวนการลงนามแยกตามหน่วยงาน</h3>
+            <div id="analytics-dept-breakdown" class="grid grid-cols-1 sm:grid-cols-5 gap-3 mt-4"></div>
+          </div>
+
+          <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20 space-y-4">
             <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">history</span> ประวัติการลงนามล่าสุด</h3>
-            <div id="analytics-recent-list" class="divide-y text-xs"></div>
+            <div id="analytics-recent-list" class="divide-y text-xs text-on-surface"></div>
           </div>
         </div>
       </div>
@@ -306,6 +357,12 @@
     let pdfDoc = null, currentPageNum = 1, totalPages = 0, currentZoom = 1.0;
     let selectedDepartment = "ส่วนกลาง", selectedVaultTab = "ส่วนกลาง";
     let allSignaturesCache = {}, pdfFileName = "Document.pdf", placedSignatures = [];
+    
+    // UI Setup States
+    let leftOpen = true;
+    let rightOpen = true;
+    let currentTextAlign = 'center';
+    let currentFontWeight = '700';
 
     // Core API Caller
     async function callGasApi(action, payload = {}) {
@@ -479,6 +536,33 @@
         document.getElementById('stat-signed-count').textContent = data.totalSignedDocs + " ฉบับ";
         document.getElementById('stat-total-sigs').textContent = data.totalSignaturesInStock + " รายการ";
         
+        // Render Department Cards with subtle colors
+        const deptContainer = document.getElementById('analytics-dept-breakdown');
+        if (deptContainer) {
+          deptContainer.innerHTML = '';
+          const cardThemes = [
+            { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700' },
+            { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700' },
+            { bg: 'bg-purple-50', border: 'border-purple-100', text: 'text-purple-700' },
+            { bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-700' },
+            { bg: 'bg-rose-50', border: 'border-rose-100', text: 'text-rose-700' }
+          ];
+          
+          DEPARTMENTS.forEach((dept, idx) => {
+            const count = data.departmentStats[dept] || 0;
+            const theme = cardThemes[idx % cardThemes.length];
+            deptContainer.innerHTML += `
+              <div class="p-3.5 ${theme.bg} rounded-xl border ${theme.border} flex flex-col justify-between transition hover:shadow-sm">
+                <span class="text-xs font-semibold text-on-surface truncate">${dept}</span>
+                <div class="mt-2 flex items-baseline justify-between">
+                  <span class="text-xl font-bold ${theme.text}">${count}</span>
+                  <span class="text-[10px] text-outline font-medium">ฉบับ</span>
+                </div>
+              </div>
+            `;
+          });
+        }
+
         const list = document.getElementById('analytics-recent-list');
         list.innerHTML = '';
         if(data.recentActivities.length === 0) list.innerHTML = '<div class="py-4 text-center">ไม่มีประวัติ</div>';
@@ -491,10 +575,29 @@
       } catch (err) { hideLoading(); alert(err.message); }
     }
 
-    // View Switching & Rendering (เหมือนเดิม)
+    // View Switching & Navigation Toggles
+    function toggleLeftSidebar() {
+      const bar = document.getElementById('left-sidebar');
+      leftOpen = !leftOpen;
+      bar.style.width = leftOpen ? '16rem' : '0px';
+      bar.style.opacity = leftOpen ? '1' : '0';
+    }
+
+    function toggleRightSidebar() {
+      const bar = document.getElementById('right-sidebar');
+      rightOpen = !rightOpen;
+      bar.style.width = rightOpen ? '20rem' : '0px';
+      bar.style.opacity = rightOpen ? '1' : '0';
+    }
+
     function switchView(viewName) {
-      ['signing', 'vault', 'analytics'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+      ['signing', 'vault', 'analytics'].forEach(v => {
+        document.getElementById(`view-${v}`).classList.add('hidden');
+        document.getElementById(`menu-btn-${v}`).className = "w-full flex items-center px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition text-sm";
+      });
       document.getElementById(`view-${viewName}`).classList.remove('hidden');
+      document.getElementById(`menu-btn-${viewName}`).className = "w-full flex items-center px-3 py-2 rounded-lg bg-primary-container text-white font-semibold shadow-sm text-sm transition";
+      
       if (viewName === 'signing' && pdfDoc) renderPage(currentPageNum);
       if (viewName === 'vault') renderVaultSignatures();
       if (viewName === 'analytics') updateAnalyticsView();
@@ -573,25 +676,87 @@
 
     function placeSignatureFromStock(uri) {
       if(!pdfDoc) return alert("อัปโหลด PDF ก่อน");
-      placedSignatures.push({ id: 'sig_'+Date.now(), page: currentPageNum, x: 80, y: 120, width: 170, height: 65, dataUri: uri, confirmed: false });
+      const offset = (placedSignatures.filter(s => s.page === currentPageNum).length * 25) % 150;
+      placedSignatures.push({ id: 'sig_'+Date.now(), page: currentPageNum, x: 80 + offset, y: 120 + offset, width: 170, height: 65, dataUri: uri, confirmed: false });
       updatePlacedCountDisplay(); renderSignatureBoxesOnPage();
     }
 
+    // Text Customizer Logic
     function toggleTextCustomizerAccordion() {
       const c = document.getElementById('text-customizer-content');
       c.classList.toggle('hidden'); document.getElementById('accordion-icon').textContent = c.classList.contains('hidden') ? 'expand_more' : 'expand_less';
     }
     
+    function setFontWeight(weight) {
+      currentFontWeight = weight;
+      ['300', '400', '700'].forEach(w => {
+        document.getElementById(`weight-btn-${w}`).className = w === weight 
+          ? "py-1 text-[11px] rounded bg-white text-primary font-bold shadow-xs transition" 
+          : "py-1 text-[11px] rounded text-outline hover:text-on-surface transition";
+      });
+    }
+
+    function setTextAlign(align) {
+      currentTextAlign = align;
+      ['left', 'center', 'right'].forEach(a => {
+        document.getElementById(`align-btn-${a}`).className = a === align 
+          ? "p-1 rounded bg-white text-primary shadow-xs transition" 
+          : "p-1 rounded text-outline hover:text-on-surface transition";
+      });
+    }
+
     function generateAndPlaceTextSignature() {
-      if(!pdfDoc) return alert("อัปโหลด PDF ก่อน");
+      if (!pdfDoc) return alert("กรุณาอัปโหลดเอกสาร PDF ก่อนวางข้อความ");
       const text = document.getElementById('custom-text-input').value.trim();
-      if(!text) return;
-      const c = document.createElement('canvas'); const ctx = c.getContext('2d');
-      ctx.font = '700 48px Inter';
-      const lines = text.split('\n'); c.width = Math.max(200, ctx.measureText(lines[0]).width + 40); c.height = Math.max(80, (lines.length * 60) + 30);
-      ctx.font = '700 48px Inter'; ctx.fillStyle = '#004ac6'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-      lines.forEach((l, i) => ctx.fillText(l, c.width/2, 25 + (i * 60) + 30));
-      placeSignatureFromStock(c.toDataURL('image/png'));
+      if (!text) return alert("กรุณาพิมพ์ข้อความที่ต้องการวางก่อนครับ");
+
+      const fontFam = document.getElementById('font-family-select').value;
+      const fontSize = parseInt(document.getElementById('font-size-select').value, 10);
+      const color = document.getElementById('text-color-picker').value;
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const fontSpec = `${currentFontWeight} ${fontSize * 2}px ${fontFam}`;
+      ctx.font = fontSpec;
+
+      const lines = text.split('\n');
+      let maxLineWidth = 0;
+      lines.forEach(line => {
+        const w = ctx.measureText(line).width;
+        if (w > maxLineWidth) maxLineWidth = w;
+      });
+
+      const lineHeight = fontSize * 2.4;
+      canvas.width = Math.max(200, maxLineWidth + 40);
+      canvas.height = Math.max(80, (lines.length * lineHeight) + 30);
+
+      ctx.font = fontSpec;
+      ctx.fillStyle = color;
+      ctx.textBaseline = 'middle';
+
+      lines.forEach((line, index) => {
+        let xPos = 20;
+        if (currentTextAlign === 'center') { ctx.textAlign = 'center'; xPos = canvas.width / 2; }
+        else if (currentTextAlign === 'right') { ctx.textAlign = 'right'; xPos = canvas.width - 20; }
+        else { ctx.textAlign = 'left'; xPos = 20; }
+        ctx.fillText(line, xPos, 25 + (index * lineHeight) + (lineHeight / 2));
+      });
+
+      const textDataUri = canvas.toDataURL('image/png');
+      const offset = (placedSignatures.filter(s => s.page === currentPageNum).length * 25) % 150;
+      
+      placedSignatures.push({
+        id: 'sig_' + Date.now(),
+        page: currentPageNum,
+        x: 80 + offset,
+        y: 120 + offset,
+        width: Math.min(220, Math.max(160, canvas.width / 2)),
+        height: Math.max(65, canvas.height / 2),
+        dataUri: textDataUri,
+        confirmed: false
+      });
+      updatePlacedCountDisplay();
+      renderSignatureBoxesOnPage();
     }
 
     function updatePlacedCountDisplay() { document.getElementById('placed-count-display').textContent = `วางแล้ว ${placedSignatures.length} จุด`; }
@@ -622,12 +787,55 @@
         const mu = () => { isDrag = false; document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); };
         document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu); e.preventDefault();
       };
+      
+      // Aspect Ratio Lock on Resize
       box.querySelector('.sig-resize-handle').onmousedown = e => {
         isRes = true; sX = e.clientX; sY = e.clientY; iW = sig.width; iH = sig.height;
-        const mm = ev => { if(!isRes) return; sig.width = Math.max(60, iW + ev.clientX - sX); sig.height = Math.max(25, iH + ev.clientY - sY); box.style.width = sig.width+'px'; box.style.height = sig.height+'px'; };
+        const aspectRatio = iW / iH;
+        
+        const mm = ev => { 
+          if(!isRes) return; 
+          const dx = ev.clientX - sX;
+          // Scale proportional to the mouse horizontal movement
+          sig.width = Math.max(60, iW + dx); 
+          sig.height = sig.width / aspectRatio; 
+          
+          box.style.width = sig.width+'px'; 
+          box.style.height = sig.height+'px'; 
+        };
         const mu = () => { isRes = false; document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); };
         document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu); e.stopPropagation(); e.preventDefault();
       };
+    }
+
+    async function printSignedDocumentDirectly() {
+      if(!pdfDoc || !placedSignatures.length) return alert("วางลายเซ็นก่อนสั่งพิมพ์");
+      showLoading("กำลังเตรียมเอกสารความละเอียดสูงสำหรับสั่งพิมพ์...");
+      try {
+        let pagesHtml = "";
+        for (let i = 1; i <= totalPages; i++) {
+          const page = await pdfDoc.getPage(i); const vp = page.getViewport({ scale: 3.5 });
+          const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; const ctx = c.getContext('2d');
+          await page.render({ canvasContext: ctx, viewport: vp }).promise;
+          const ratioX = vp.width / parseFloat(document.getElementById('pdf-canvas').style.width);
+          
+          for(const sig of placedSignatures.filter(s => s.page === i)) {
+            const img = new Image(); img.src = sig.dataUri; await new Promise(r => img.onload = r);
+            ctx.drawImage(img, sig.x * ratioX, sig.y * ratioX, sig.width * ratioX, sig.height * ratioX);
+          }
+          pagesHtml += `<div class="print-page"><img src="${c.toDataURL('image/jpeg', 0.98)}" /></div>`;
+        }
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+          <html><head><title>พิมพ์เอกสาร</title>
+          <style>@page{size:auto;margin:0mm;}body{margin:0;} .print-page{width:100%;height:100vh;display:flex;justify-content:center;align-items:center;page-break-after:always;box-sizing:border-box;} img{max-width:100%;max-height:100%;object-fit:contain;}</style>
+          </head><body>${pagesHtml}<script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500)};<\/script></body></html>
+        `);
+        printWindow.document.close();
+        callGasApi("logSigningAction", { fileName: pdfFileName, department: selectedDepartment, sigCount: placedSignatures.length, actionType: "สั่งพิมพ์เอกสาร" }).catch(()=>{});
+        hideLoading();
+      } catch (err) { hideLoading(); alert(err.message); }
     }
 
     async function downloadSignedPdfDocument() {

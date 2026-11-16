@@ -645,6 +645,7 @@
           pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(evt.target.result) }).promise;
           totalPages = pdfDoc.numPages; currentPageNum = 1;
           await renderPage(currentPageNum);
+          renderThumbnails(); // กู้คืนฟังก์ชันสร้าง Thumbnail
         } catch(err) { alert(err.message); }
         hideLoading();
       };
@@ -669,10 +670,55 @@
       document.getElementById('page-num-display').textContent = `หน้า ${pageNum} / ${totalPages}`;
       document.getElementById('zoom-display').textContent = `${Math.round(currentZoom * 100)}%`;
       renderSignatureBoxesOnPage();
+      updateThumbnailsActiveState(); // กู้คืนฟังก์ชันอัปเดตสถานะ Thumbnail
     }
 
     function changePage(d) { const t = currentPageNum + d; if (t >= 1 && t <= totalPages) { currentPageNum = t; renderPage(currentPageNum); } }
     function zoomDoc(d) { const n = currentZoom + d; if (n >= 0.5 && n <= 2.2) { currentZoom = n; renderPage(currentPageNum); } }
+
+    // --- กู้คืนส่วนของ Thumbnails ---
+    async function renderThumbnails() {
+      const container = document.getElementById('thumbnails-list');
+      container.innerHTML = '';
+      document.getElementById('thumbnail-title').textContent = `พรีวิวหน้าเอกสาร (${totalPages})`;
+
+      for (let i = 1; i <= totalPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const vp = page.getViewport({ scale: 0.25 });
+        const item = document.createElement('div');
+        item.id = `thumb-page-${i}`;
+        item.className = `rounded-xl p-2 cursor-pointer transition border-2 ${i === currentPageNum ? 'border-primary bg-primary-container/10' : 'border-transparent bg-white/70 hover:border-primary/50'}`;
+        
+        const c = document.createElement('canvas');
+        c.width = vp.width; c.height = vp.height; c.className = 'w-full rounded bg-white shadow-xs';
+        const ctx = c.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        
+        const label = document.createElement('span');
+        label.className = `text-[10px] mt-1 block text-center font-medium ${i === currentPageNum ? 'text-primary font-bold' : 'text-on-surface-variant'}`;
+        label.textContent = `หน้า ${i}${i === currentPageNum ? ' (กำลังดู)' : ''}`;
+        
+        item.appendChild(c); item.appendChild(label);
+        item.onclick = () => { currentPageNum = i; renderPage(currentPageNum); };
+        container.appendChild(item);
+      }
+    }
+
+    function updateThumbnailsActiveState() {
+      for (let i = 1; i <= totalPages; i++) {
+        const el = document.getElementById(`thumb-page-${i}`);
+        if (!el) continue;
+        const label = el.querySelector('span');
+        if (i === currentPageNum) {
+          el.className = 'rounded-xl p-2 cursor-pointer transition border-2 border-primary bg-primary-container/10';
+          if (label) { label.className = 'text-[10px] mt-1 block text-center font-bold text-primary'; label.textContent = `หน้า ${i} (กำลังดู)`; }
+        } else {
+          el.className = 'rounded-xl p-2 cursor-pointer transition border-2 border-transparent bg-white/70 hover:border-primary/50';
+          if (label) { label.className = 'text-[10px] mt-1 block text-center font-medium text-on-surface-variant'; label.textContent = `หน้า ${i}`; }
+        }
+      }
+    }
+    // ---------------------------------
 
     function placeSignatureFromStock(uri) {
       if(!pdfDoc) return alert("อัปโหลด PDF ก่อน");
@@ -818,10 +864,11 @@
           const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; const ctx = c.getContext('2d');
           await page.render({ canvasContext: ctx, viewport: vp }).promise;
           const ratioX = vp.width / parseFloat(document.getElementById('pdf-canvas').style.width);
+          const ratioY = vp.height / parseFloat(document.getElementById('pdf-canvas').style.height); // แก้ไขคืนค่า ratioY
           
           for(const sig of placedSignatures.filter(s => s.page === i)) {
             const img = new Image(); img.src = sig.dataUri; await new Promise(r => img.onload = r);
-            ctx.drawImage(img, sig.x * ratioX, sig.y * ratioX, sig.width * ratioX, sig.height * ratioX);
+            ctx.drawImage(img, sig.x * ratioX, sig.y * ratioY, sig.width * ratioX, sig.height * ratioY); // ปรับการคูณ Y และ Height ให้ถูกสัดส่วน
           }
           pagesHtml += `<div class="print-page"><img src="${c.toDataURL('image/jpeg', 0.98)}" /></div>`;
         }
@@ -848,10 +895,11 @@
           const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; const ctx = c.getContext('2d');
           await page.render({ canvasContext: ctx, viewport: vp }).promise;
           const ratioX = vp.width / parseFloat(document.getElementById('pdf-canvas').style.width);
+          const ratioY = vp.height / parseFloat(document.getElementById('pdf-canvas').style.height); // แก้ไขคืนค่า ratioY
           
           for(const sig of placedSignatures.filter(s => s.page === i)) {
             const img = new Image(); img.src = sig.dataUri; await new Promise(r => img.onload = r);
-            ctx.drawImage(img, sig.x * ratioX, sig.y * ratioX, sig.width * ratioX, sig.height * ratioX);
+            ctx.drawImage(img, sig.x * ratioX, sig.y * ratioY, sig.width * ratioX, sig.height * ratioY); // ปรับการคูณ Y และ Height ให้ถูกสัดส่วน
           }
           
           const imgData = c.toDataURL('image/jpeg', 0.98); const wPt = vp.width/3.5; const hPt = vp.height/3.5;

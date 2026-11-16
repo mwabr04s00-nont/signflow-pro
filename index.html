@@ -44,6 +44,15 @@
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #c3c6d7; border-radius: 9999px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #737686; }
 
+    /* เพิ่ม Animation สำหรับหน้า Login */
+    @keyframes fade-in-up {
+      0% { opacity: 0; transform: translateY(30px) scale(0.98); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .animate-fade-in-up {
+      animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
     .placed-sig-box { position: absolute; cursor: move; user-select: none; transition: box-shadow 0.15s, background-color 0.15s; }
     .placed-sig-box.active-box { box-shadow: 0 0 0 2px #004ac6; background-color: rgba(0, 74, 198, 0.05); z-index: 40; }
     .placed-sig-box.confirmed-box { box-shadow: 0 0 0 2px #16a34a; background-color: rgba(22, 163, 74, 0.03); z-index: 30; }
@@ -59,56 +68,85 @@
 <body class="bg-surface text-on-surface h-full w-full overflow-hidden select-none antialiased">
 
   <!-- ========================================== -->
-  <!-- 1. LOGIN SCREEN                           -->
+  <!-- 1. LOGIN SCREEN (Enterprise Premium)       -->
   <!-- ========================================== -->
-  <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-surface p-4 lg:p-8">
-    <div class="w-full max-w-5xl bg-surface-container-lowest rounded-2xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative border border-outline-variant/20">
+  <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center p-4 lg:p-8 bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-100">
+    
+    <!-- วงกลมแสงพื้นหลัง (Ambient Glow) ช่วยให้ดูพรีเมียม -->
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
+    
+    <div class="w-full max-w-[960px] bg-white rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden grid grid-cols-1 lg:grid-cols-2 relative z-10 animate-fade-in-up">
       
-      <div class="lg:col-span-5 bg-[#00174b] p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden text-white">
-        <div class="absolute inset-0 bg-gradient-to-b from-[#00174b]/90 via-[#002b7a]/85 to-[#00174b]/95"></div>
+      <!-- ฝั่งซ้าย: ภาพลักษณ์องค์กร & Security (สีน้ำเงินเข้ม) -->
+      <div class="relative hidden lg:flex flex-col justify-center p-12 overflow-hidden bg-[#0A1931]">
+        <!-- ภาพ Abstract หรูๆ จาก Unsplash ซ้อนทับให้มีมิติ -->
+        <img src="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1200&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-30">
+        <!-- Gradient บังขอบภาพไม่ให้ตัดฉับ -->
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0A1931] via-[#0A1931]/80 to-transparent"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-[#0A1931] via-[#0A1931]/50 to-transparent"></div>
+        
         <div class="relative z-10">
-          <div class="flex items-center gap-3 mb-8">
-            <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md">
-              <span class="material-symbols-outlined text-2xl text-blue-400">verified_user</span>
+          <div class="flex items-center gap-3 mb-10">
+            <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/20">
+              <span class="material-symbols-outlined text-[22px] text-blue-300">shield_lock</span>
             </div>
-            <span class="text-2xl font-bold tracking-wider">SignFlow Pro</span>
+            <span class="text-2xl font-bold tracking-wide text-white">SignFlow Pro</span>
           </div>
-          <h2 class="text-3xl font-bold mb-4">Enterprise Grade Security</h2>
-          <p class="text-blue-100/80 leading-relaxed text-sm">
-            ระบบลงนามเอกสารอิเล็กทรอนิกส์ ควบคุมสิทธิ์การเข้าถึงข้อมูลและการลงนามแยกตามหน่วยงานอย่างรัดกุม
+          
+          <h2 class="text-[2.5rem] font-bold mb-5 leading-[1.2] text-white">
+            Enterprise Grade<br>Security
+          </h2>
+          <p class="text-blue-200/80 leading-relaxed text-sm font-medium max-w-sm">
+            ระบบลงนามเอกสารอิเล็กทรอนิกส์ ควบคุมสิทธิ์การเข้าถึงข้อมูลและการลงนามแยกตามหน่วยงานอย่างรัดกุม ปลอดภัยระดับองค์กร
           </p>
         </div>
       </div>
 
-      <div class="lg:col-span-7 p-8 lg:p-12 flex flex-col justify-center bg-surface-container-lowest relative">
-        <div class="max-w-md w-full mx-auto">
-          <div class="mb-8">
-            <h1 class="text-2xl font-bold mb-2">เข้าสู่ระบบ</h1>
-            <p class="text-sm text-on-surface-variant">กรุณาเข้าสู่ระบบด้วยรหัสประจำหน่วยงานของคุณ</p>
+      <!-- ฝั่งขวา: ฟอร์มเข้าสู่ระบบ (สีสว่าง) -->
+      <div class="p-8 lg:p-14 flex flex-col justify-center bg-white relative">
+        <div class="max-w-[380px] w-full mx-auto">
+          
+          <!-- โลโก้สำหรับมือถือ (ซ่อนบน Desktop) -->
+          <div class="lg:hidden flex items-center gap-2 mb-8">
+            <span class="material-symbols-outlined text-3xl text-primary">shield_lock</span>
+            <span class="text-2xl font-bold text-gray-900">SignFlow Pro</span>
           </div>
-          <form class="space-y-6" onsubmit="handleLogin(event)">
-            <div class="space-y-2">
-              <label class="block text-sm font-medium">ชื่อผู้ใช้งาน (รหัสหน่วยงาน / admin)</label>
-              <div class="relative flex items-center">
-                <span class="absolute left-4 text-outline material-symbols-outlined">person</span>
-                <input required type="text" id="username" class="w-full pl-12 pr-4 py-3 bg-surface-container-low rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary" placeholder="ระบุชื่อผู้ใช้งาน">
+
+          <div class="mb-8">
+            <h1 class="text-2xl font-extrabold mb-1.5 text-gray-900 tracking-tight">เข้าสู่ระบบ</h1>
+            <p class="text-sm text-gray-500 font-medium">กรุณาเข้าสู่ระบบด้วยรหัสประจำหน่วยงานของคุณ</p>
+          </div>
+          
+          <form class="space-y-5" onsubmit="handleLogin(event)">
+            <!-- ช่องกรอกชื่อผู้ใช้งาน -->
+            <div class="space-y-1.5">
+              <label class="block text-[13px] font-bold text-gray-700">ชื่อผู้ใช้งาน (รหัสหน่วยงาน / admin)</label>
+              <div class="relative flex items-center group">
+                <span class="absolute left-4 text-gray-400 group-focus-within:text-primary transition-colors material-symbols-outlined text-[20px]">person</span>
+                <input required type="text" id="username" class="w-full pl-12 pr-4 py-3.5 bg-[#F4F7FB] border border-transparent rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all font-semibold text-gray-800 placeholder-gray-400" placeholder="admin">
               </div>
             </div>
-            <div class="space-y-2">
-              <label class="block text-sm font-medium">รหัสผ่าน</label>
-              <div class="relative flex items-center">
-                <span class="absolute left-4 text-outline material-symbols-outlined">lock</span>
-                <input required type="password" id="password" class="w-full pl-12 pr-12 py-3 bg-surface-container-low rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary" placeholder="••••••••">
-                <button type="button" class="absolute right-4 text-outline hover:text-on-surface" onclick="togglePassword()">
-                  <span class="material-symbols-outlined" id="eye-icon">visibility</span>
+            
+            <!-- ช่องกรอกรหัสผ่าน -->
+            <div class="space-y-1.5">
+              <label class="block text-[13px] font-bold text-gray-700">รหัสผ่าน</label>
+              <div class="relative flex items-center group">
+                <span class="absolute left-4 text-gray-400 group-focus-within:text-primary transition-colors material-symbols-outlined text-[20px]">lock</span>
+                <input required type="password" id="password" class="w-full pl-12 pr-12 py-3.5 bg-[#F4F7FB] border border-transparent rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all font-semibold text-gray-800 placeholder-gray-400" placeholder="••••••••">
+                <button type="button" class="absolute right-4 text-gray-400 hover:text-gray-700 transition-colors p-1 flex items-center" onclick="togglePassword()">
+                  <span class="material-symbols-outlined text-[20px]" id="eye-icon">visibility</span>
                 </button>
               </div>
             </div>
-            <button type="submit" class="w-full py-3.5 bg-primary-container text-white font-medium rounded-xl hover:bg-primary transition shadow-md flex items-center justify-center gap-2">
-              <span>เข้าสู่ระบบ</span>
-              <span class="material-symbols-outlined text-sm">arrow_forward</span>
+            
+            <!-- ปุ่มเข้าสู่ระบบ -->
+            <button type="submit" class="w-full py-3.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 shadow-[0_8px_20px_rgba(0,74,198,0.25)] hover:shadow-[0_12px_25px_rgba(0,74,198,0.3)] transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 mt-8">
+              <span class="tracking-wide">เข้าสู่ระบบ</span>
+              <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
             </button>
           </form>
+          
         </div>
       </div>
     </div>

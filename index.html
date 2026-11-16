@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>SignFlow Pro - Enterprise e-Signature</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#004ac6",
+            "primary-container": "#2563eb",
+            "on-primary": "#ffffff",
+            "surface": "#f8f9ff",
+            "surface-container": "#e5eeff",
+            "surface-container-low": "#eff4ff",
+            "surface-container-lowest": "#ffffff",
+            "on-surface": "#0b1c30",
+            "on-surface-variant": "#434655",
+            "outline": "#737686",
+            "outline-variant": "#c3c6d7"
+          }
+        }
+      }
+    };
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', 'Sarabun', sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #c3c6d7; border-radius: 9999px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #737686; }
+
+    .placed-sig-box { position: absolute; cursor: move; user-select: none; transition: border-color 0.15s, box-shadow 0.15s; }
+    .placed-sig-box.active-box { border: 2px dashed #004ac6; background-color: rgba(0, 74, 198, 0.05); z-index: 40; }
+    .placed-sig-box.confirmed-box { border: 2px solid #16a34a; background-color: rgba(22, 163, 74, 0.03); z-index: 30; }
+
+    .sig-resize-handle {
+      position: absolute; right: -6px; bottom: -6px; width: 14px; height: 14px;
+      background: #004ac6; border: 2px solid #ffffff; border-radius: 9999px; cursor: se-resize; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .confirmed-box .sig-resize-handle { background: #16a34a; }
+  </style>
+</head>
+
+<body class="bg-surface text-on-surface h-full w-full overflow-hidden select-none">
+
+  <!-- ========================================== -->
+  <!-- 1. LOGIN SCREEN                           -->
+  <!-- ========================================== -->
+  <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-surface p-4 lg:p-8">
+    <div class="w-full max-w-5xl bg-surface-container-lowest rounded-2xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative border border-outline-variant/20">
+      
+      <div class="lg:col-span-5 bg-[#00174b] p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden text-white">
+        <div class="absolute inset-0 bg-gradient-to-b from-[#00174b]/90 via-[#002b7a]/85 to-[#00174b]/95"></div>
+        <div class="relative z-10">
+          <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md">
+              <span class="material-symbols-outlined text-2xl text-blue-400">verified_user</span>
+            </div>
+            <span class="text-2xl font-bold tracking-wider">SignFlow Pro</span>
+          </div>
+          <h2 class="text-3xl font-bold mb-4">Enterprise Grade Security</h2>
+          <p class="text-blue-100/80 leading-relaxed text-sm">
+            ระบบลงนามเอกสารอิเล็กทรอนิกส์ ควบคุมสิทธิ์การเข้าถึงข้อมูลและการลงนามแยกตามหน่วยงานอย่างรัดกุม
+          </p>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7 p-8 lg:p-12 flex flex-col justify-center bg-surface-container-lowest relative">
+        <div class="max-w-md w-full mx-auto">
+          <div class="mb-8">
+            <h1 class="text-2xl font-bold mb-2">เข้าสู่ระบบ</h1>
+            <p class="text-sm text-on-surface-variant">กรุณาเข้าสู่ระบบด้วยรหัสประจำหน่วยงานของคุณ</p>
+          </div>
+          <form class="space-y-6" onsubmit="handleLogin(event)">
+            <div class="space-y-2">
+              <label class="block text-sm font-medium">ชื่อผู้ใช้งาน (รหัสหน่วยงาน / admin)</label>
+              <div class="relative flex items-center">
+                <span class="absolute left-4 text-outline material-symbols-outlined">person</span>
+                <input required type="text" id="username" class="w-full pl-12 pr-4 py-3 bg-surface-container-low rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary" placeholder="ระบุชื่อผู้ใช้งาน">
+              </div>
+            </div>
+            <div class="space-y-2">
+              <label class="block text-sm font-medium">รหัสผ่าน</label>
+              <div class="relative flex items-center">
+                <span class="absolute left-4 text-outline material-symbols-outlined">lock</span>
+                <input required type="password" id="password" class="w-full pl-12 pr-12 py-3 bg-surface-container-low rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary" placeholder="••••••••">
+                <button type="button" class="absolute right-4 text-outline hover:text-on-surface" onclick="togglePassword()">
+                  <span class="material-symbols-outlined" id="eye-icon">visibility</span>
+                </button>
+              </div>
+            </div>
+            <button type="submit" class="w-full py-3.5 bg-primary-container text-white font-medium rounded-xl hover:bg-primary transition shadow-md flex items-center justify-center gap-2">
+              <span>เข้าสู่ระบบ</span>
+              <span class="material-symbols-outlined text-sm">arrow_forward</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 2. MAIN APPLICATION WORKSPACE              -->
+  <!-- ========================================== -->
+  <div id="app-screen" class="hidden h-screen w-screen flex flex-col overflow-hidden bg-surface">
+    <header class="h-16 flex-shrink-0 bg-white shadow-xs z-30 flex items-center justify-between px-6 border-b border-outline-variant/20">
+      <div class="flex items-center gap-5">
+        <div class="flex items-center gap-2 cursor-pointer">
+          <span class="material-symbols-outlined text-primary text-2xl font-bold">signature</span>
+          <span class="text-xl font-bold text-on-surface tracking-tight">SignFlow Pro</span>
+        </div>
+        <div id="header-doc-chip" class="flex items-center gap-2 bg-surface-container-low px-3.5 py-1.5 rounded-xl border border-outline-variant/20 shadow-xs max-w-[240px]">
+          <span class="material-symbols-outlined text-primary text-lg flex-shrink-0">upload_file</span>
+          <span class="text-xs font-semibold truncate" id="header-filename">ยังไม่ได้เลือกเอกสาร</span>
+          <button onclick="document.getElementById('pdf-file-input').click()" class="p-0.5 rounded text-outline hover:text-on-surface">
+            <span class="material-symbols-outlined text-sm">swap_horiz</span>
+          </button>
+          <input type="file" id="pdf-file-input" accept="application/pdf" class="hidden" onchange="handlePdfUpload(event)">
+        </div>
+      </div>
+
+      <div id="header-pdf-toolbar" class="flex items-center gap-2 bg-surface-container-low px-3.5 py-1.5 rounded-2xl border border-outline-variant/20 shadow-xs">
+        <button onclick="changePage(-1)" class="p-1 rounded-lg hover:bg-white text-on-surface"><span class="material-symbols-outlined text-base">chevron_left</span></button>
+        <span class="text-xs font-bold text-on-surface min-w-[75px] text-center" id="page-num-display">หน้า 0 / 0</span>
+        <button onclick="changePage(1)" class="p-1 rounded-lg hover:bg-white text-on-surface"><span class="material-symbols-outlined text-base">chevron_right</span></button>
+        <div class="w-[1px] h-4 bg-outline-variant/30 mx-1"></div>
+        <button onclick="zoomDoc(-0.1)" class="p-1 rounded-lg hover:bg-white text-on-surface"><span class="material-symbols-outlined text-base">remove</span></button>
+        <span class="text-xs font-bold text-primary min-w-[45px] text-center" id="zoom-display">100%</span>
+        <button onclick="zoomDoc(0.1)" class="p-1 rounded-lg hover:bg-white text-on-surface"><span class="material-symbols-outlined text-base">add</span></button>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="px-3 py-1 bg-primary/10 text-primary rounded-lg text-xs font-bold mr-2" id="user-role-badge">Admin</div>
+        <button onclick="toggleLeftSidebar()" class="p-2 rounded-xl hover:bg-surface-container text-on-surface-variant border border-outline-variant/20"><span class="material-symbols-outlined text-lg">dock_to_left</span></button>
+        <button id="toggle-right-btn" onclick="toggleRightSidebar()" class="p-2 rounded-xl hover:bg-surface-container text-on-surface-variant border border-outline-variant/20"><span class="material-symbols-outlined text-lg">dock_to_right</span></button>
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary to-primary-container flex items-center justify-center text-white font-bold cursor-pointer hover:opacity-90" onclick="logout()" title="ออกจากระบบ">
+          <span class="material-symbols-outlined text-lg">logout</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex flex-1 h-[calc(100vh-4rem)] w-full overflow-hidden relative">
+      <!-- LEFT SIDEBAR -->
+      <aside id="left-sidebar" class="w-64 h-full bg-surface-container-low flex flex-col pt-4 pb-4 transition-all border-r border-outline-variant/20 z-20 flex-shrink-0 overflow-hidden">
+        <nav class="flex-shrink-0 px-3 space-y-1">
+          <button onclick="switchView('signing')" id="menu-btn-signing" class="w-full flex items-center px-3 py-2 rounded-lg bg-primary-container text-white font-semibold shadow-sm text-sm transition"><span class="material-symbols-outlined mr-3 text-lg">edit_document</span>ลงนามเอกสาร</button>
+          <button onclick="switchView('vault')" id="menu-btn-vault" class="w-full flex items-center px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition text-sm"><span class="material-symbols-outlined mr-3 text-lg">draw</span>จัดการคลังลายเซ็น</button>
+          <button onclick="switchView('analytics')" id="menu-btn-analytics" class="w-full flex items-center px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition text-sm"><span class="material-symbols-outlined mr-3 text-lg">analytics</span>สถิติการใช้งาน</button>
+        </nav>
+        <div id="thumbnails-section" class="flex-1 flex flex-col min-h-0 px-4 mt-3 border-t border-outline-variant/10 pt-3">
+          <div class="flex-shrink-0 text-[11px] font-bold text-outline uppercase mb-2" id="thumbnail-title">พรีวิวหน้าเอกสาร (0)</div>
+          <div id="thumbnails-list" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-1 pb-2">
+            <div class="text-xs text-outline text-center py-8">เลือกไฟล์ PDF ก่อน</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- VIEW 1: SIGNING WORKSPACE -->
+      <div id="view-signing" class="flex-1 min-w-0 w-full h-full flex overflow-hidden">
+        <main class="flex-1 min-w-0 h-full bg-[#151921] flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
+          <div class="flex-1 w-full h-full overflow-auto custom-scrollbar flex items-start justify-center p-8" id="viewport-container">
+            <div id="pdf-wrapper" class="relative bg-white shadow-2xl rounded-lg select-none border border-outline-variant/10 transition-all my-auto">
+              <canvas id="pdf-canvas" class="block"></canvas>
+              <div id="signature-boxes-container" class="absolute inset-0 pointer-events-none"></div>
+            </div>
+          </div>
+        </main>
+
+        <aside id="right-sidebar" class="w-80 h-full bg-surface-container-low/95 backdrop-blur-md flex flex-col justify-between border-l border-outline-variant/20 z-20 flex-shrink-0 overflow-hidden">
+          <div class="p-4 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+            
+            <div class="p-3.5 bg-white rounded-2xl border border-outline-variant/30 shadow-xs space-y-2">
+              <label class="block text-[11px] uppercase tracking-wider text-outline font-bold">สังกัด / หน่วยงาน</label>
+              <!-- Dropdown นี้จะถูกล็อกถ้าไม่ใช่ admin -->
+              <select id="signing-department-select" onchange="onDepartmentFilterChanged(this.value)" class="w-full p-2 bg-surface-container-low rounded-xl text-xs font-semibold text-on-surface border border-outline-variant/20 focus:outline-none focus:ring-2 focus:ring-primary"></select>
+            </div>
+
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] uppercase tracking-wider text-outline font-bold">ลายมือชื่อประจำหน่วย</span>
+                <span class="text-[10px] text-primary cursor-pointer hover:underline" onclick="switchView('vault')">+ เพิ่มในคลัง</span>
+              </div>
+              <div id="department-signature-grid" class="grid grid-cols-2 gap-2 min-h-[70px]"></div>
+            </div>
+
+            <!-- กล่องข้อความแบบเดิม -->
+            <div class="bg-white rounded-2xl border border-outline-variant/30 shadow-xs overflow-hidden transition-all">
+              <button type="button" onclick="toggleTextCustomizerAccordion()" class="w-full p-3.5 flex items-center justify-between hover:bg-surface-container-low">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[18px] text-primary">text_fields</span>
+                  <span class="text-xs font-bold">พิมพ์ข้อความ / วันที่</span>
+                </div>
+                <span id="accordion-icon" class="material-symbols-outlined text-outline">expand_less</span>
+              </button>
+              <div id="text-customizer-content" class="p-3.5 pt-0 space-y-3 block">
+                <textarea id="custom-text-input" rows="2" class="w-full p-2.5 bg-surface-container-low rounded-xl text-xs border border-outline-variant/20 focus:outline-none focus:ring-2 focus:ring-primary resize-y min-h-[50px] max-h-[140px]" placeholder="พิมพ์ข้อความ..."></textarea>
+                <button type="button" onclick="generateAndPlaceTextSignature()" class="w-full py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
+                  <span class="material-symbols-outlined text-[16px]">add_location_alt</span> วางข้อความนี้
+                </button>
+              </div>
+            </div>
+            
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-[11px] text-primary font-bold" id="placed-count-display">วางแล้ว 0 จุด</span>
+              <button onclick="clearAllSignaturesOnPage()" class="text-[11px] text-red-600 hover:underline flex items-center gap-0.5"><span class="material-symbols-outlined text-[14px]">delete_sweep</span> ลบหน้านี้</button>
+            </div>
+          </div>
+
+          <div class="flex-shrink-0 p-4 bg-surface-container border-t border-outline-variant/10 space-y-2">
+            <button onclick="downloadSignedPdfDocument()" class="w-full h-11 bg-primary text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2 shadow-md hover:bg-primary/90">
+              <span class="material-symbols-outlined text-lg">picture_as_pdf</span> บันทึก / ดาวน์โหลด PDF
+            </button>
+          </div>
+        </aside>
+      </div>
+
+      <!-- VIEW 2: VAULT -->
+      <div id="view-vault" class="hidden flex-1 min-w-0 w-full h-full bg-surface overflow-y-auto custom-scrollbar p-6 lg:p-8">
+        <div class="max-w-6xl mx-auto space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-outline-variant/20 pb-4">
+            <div>
+              <h2 class="text-2xl font-bold text-on-surface">จัดการคลังลายเซ็น</h2>
+            </div>
+            <button onclick="openUploadModal()" class="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium flex items-center gap-2 shadow">
+              <span class="material-symbols-outlined text-lg">add</span> อัปโหลดลายเซ็นใหม่
+            </button>
+          </div>
+          <div class="flex items-center gap-2 overflow-x-auto pb-2 border-b border-outline-variant/10" id="vault-tabs-bar"></div>
+          <div id="vault-signatures-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+        </div>
+      </div>
+
+      <!-- VIEW 3: ANALYTICS -->
+      <div id="view-analytics" class="hidden flex-1 min-w-0 w-full h-full bg-surface overflow-y-auto custom-scrollbar p-6 lg:p-8">
+        <div class="max-w-5xl mx-auto space-y-6">
+          <div class="border-b border-outline-variant/20 pb-4 flex items-center justify-between">
+            <h2 class="text-2xl font-bold text-on-surface">สถิติการลงนามเอกสาร</h2>
+            <button onclick="updateAnalyticsView()" class="px-3 py-1.5 bg-white border rounded-xl text-xs font-semibold text-primary"><span class="material-symbols-outlined text-sm">refresh</span> รีเฟรชข้อมูล</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="p-5 bg-white rounded-2xl shadow-xs"><span class="text-xs text-outline font-medium">เอกสารลงนามทั้งหมด</span><p class="text-3xl font-extrabold text-primary" id="stat-signed-count">0 ฉบับ</p></div>
+            <div class="p-5 bg-white rounded-2xl shadow-xs"><span class="text-xs text-outline font-medium">ลายเซ็นทั้งหมดในคลัง</span><p class="text-3xl font-extrabold" id="stat-total-sigs">0 รายการ</p></div>
+          </div>
+          <div class="p-5 bg-white rounded-2xl shadow-xs space-y-4">
+            <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">history</span> ประวัติการลงนามล่าสุด</h3>
+            <div id="analytics-recent-list" class="divide-y text-xs"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div id="upload-sig-modal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full space-y-4">
+      <h3 class="text-base font-bold">อัปโหลดลายเซ็นใหม่</h3>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold mb-1">หน่วยงานสังกัด *</label>
+          <select id="upload-dept-select" class="w-full p-2.5 bg-surface-container-low rounded-xl text-xs"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">ชื่อเจ้าของลายเซ็น *</label>
+          <input type="text" id="upload-owner-name" class="w-full p-2.5 bg-surface-container-low rounded-xl text-xs" placeholder="เช่น นายสมชาย ใจดี">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">ไฟล์ภาพลายเซ็น *</label>
+          <input type="file" id="upload-file-input" accept="image/png,image/jpeg" class="w-full text-xs">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2"><button onclick="closeUploadModal()" class="px-4 py-2 text-xs">ยกเลิก</button><button onclick="submitUploadSignature()" class="px-5 py-2 bg-primary text-white rounded-xl text-xs">บันทึก</button></div>
+    </div>
+  </div>
+
+  <div id="loading-overlay" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center flex-col text-white gap-3">
+    <div class="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+    <span class="text-sm font-medium" id="loading-text">กำลังประมวลผล...</span>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    // ⚠️ นำ URL จาก Apps Script (Deploy แบบ Web App - Execute as User accessing the app หรือ Me, Access: Anyone) มาวาง
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyXxEakfqAVRtMkHAbLDNik6idHaSet6vNUK_nJ8faRU26Fuqs4SaEbBYuNsTil42nv/exec"; 
+
+    const DEPARTMENTS = ["ส่วนกลาง", "กองบริการ", "กองธุรกิจบริการ", "กองบำรุงรักษา", "กองรายได้"];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // Auth State
+    let authCredentials = { username: "", password: "" };
+    let currentUserRole = null; 
+
+    // App State
+    let pdfDoc = null, currentPageNum = 1, totalPages = 0, currentZoom = 1.0;
+    let selectedDepartment = "ส่วนกลาง", selectedVaultTab = "ส่วนกลาง";
+    let allSignaturesCache = {}, pdfFileName = "Document.pdf", placedSignatures = [];
+
+    // Core API Caller
+    async function callGasApi(action, payload = {}) {
+      try {
+        const response = await fetch(GAS_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+          body: JSON.stringify({ action: action, auth: authCredentials, payload: payload })
+        });
+        const resData = await response.json();
+        if (!resData.success) throw new Error(resData.message);
+        return resData.data;
+      } catch (err) {
+        throw err;
+      }
+    }
+
+    function showLoading(msg) { document.getElementById('loading-text').textContent = msg; document.getElementById('loading-overlay').classList.remove('hidden'); }
+    function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
+    function togglePassword() { const p = document.getElementById('password'); p.type = p.type === 'password' ? 'text' : 'password'; }
+
+    // Login Flow
+    async function handleLogin(e) {
+      e.preventDefault();
+      const user = document.getElementById('username').value.trim();
+      const pass = document.getElementById('password').value;
+      
+      authCredentials = { username: user, password: pass };
+      showLoading("กำลังตรวจสอบสิทธิ์...");
+
+      try {
+        const userData = await callGasApi("login");
+        hideLoading();
+        currentUserRole = userData.role;
+        
+        document.getElementById('user-role-badge').textContent = (currentUserRole === "ALL") ? "Admin (ทุกหน่วยงาน)" : currentUserRole;
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-screen').classList.remove('hidden');
+        
+        applyRoleRestrictions();
+        loadDepartmentSignatures(selectedDepartment);
+      } catch (err) {
+        hideLoading();
+        authCredentials = { username: "", password: "" };
+        alert(err.message);
+      }
+    }
+
+    function logout() {
+      authCredentials = { username: "", password: "" };
+      currentUserRole = null;
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('app-screen').classList.add('hidden');
+      document.getElementById('password').value = "";
+    }
+
+    // Role-Based UI Restrictions
+    function applyRoleRestrictions() {
+      const allowedDepts = currentUserRole === "ALL" ? DEPARTMENTS : [currentUserRole];
+      selectedDepartment = allowedDepts[0];
+      selectedVaultTab = allowedDepts[0];
+
+      // Dropdown Signing
+      const select = document.getElementById('signing-department-select');
+      select.innerHTML = '';
+      allowedDepts.forEach(d => select.innerHTML += `<option value="${d}">${d}</option>`);
+      
+      if (allowedDepts.length === 1) {
+        select.disabled = true;
+        select.classList.add('bg-gray-100', 'cursor-not-allowed', 'opacity-70');
+      } else {
+        select.disabled = false;
+        select.classList.remove('bg-gray-100', 'cursor-not-allowed', 'opacity-70');
+      }
+
+      // Vault Upload Dropdown
+      const uploadSelect = document.getElementById('upload-dept-select');
+      uploadSelect.innerHTML = '';
+      allowedDepts.forEach(d => uploadSelect.innerHTML += `<option value="${d}">${d}</option>`);
+      if (allowedDepts.length === 1) uploadSelect.disabled = true;
+
+      initVaultTabs(allowedDepts);
+    }
+
+    function initVaultTabs(allowedDepts) {
+      const bar = document.getElementById('vault-tabs-bar');
+      bar.innerHTML = '';
+      allowedDepts.forEach(dept => {
+        const btn = document.createElement('button');
+        btn.className = `px-4 py-2 rounded-xl text-xs font-bold transition ${dept === selectedVaultTab ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:bg-surface-container'}`;
+        btn.textContent = dept;
+        btn.onclick = () => { selectedVaultTab = dept; initVaultTabs(allowedDepts); renderVaultSignatures(); };
+        bar.appendChild(btn);
+      });
+    }
+
+    function onDepartmentFilterChanged(dept) {
+      selectedDepartment = dept;
+      loadDepartmentSignatures(dept);
+    }
+
+    // API Integrations
+    async function loadDepartmentSignatures(dept) {
+      const grid = document.getElementById('department-signature-grid');
+      grid.innerHTML = '<div class="col-span-2 text-center py-4 text-xs">กำลังโหลดลายเซ็น...</div>';
+      try {
+        const list = await callGasApi("getSignaturesStock", { department: dept });
+        allSignaturesCache[dept] = list || [];
+        renderDepartmentGrid(allSignaturesCache[dept]);
+      } catch (err) {
+        grid.innerHTML = `<div class="col-span-2 text-center text-xs text-red-500 py-2">${err.message}</div>`;
+      }
+    }
+
+    async function renderVaultSignatures() {
+      const container = document.getElementById('vault-signatures-container');
+      container.innerHTML = '<div class="col-span-full text-center py-8 text-xs">กำลังโหลดลายเซ็น...</div>';
+      try {
+        const list = await callGasApi("getSignaturesStock", { department: selectedVaultTab });
+        allSignaturesCache[selectedVaultTab] = list || [];
+        displayVaultCards(allSignaturesCache[selectedVaultTab]);
+      } catch (err) {
+        container.innerHTML = `<div class="col-span-full text-center text-red-500 text-xs">${err.message}</div>`;
+      }
+    }
+
+    async function deleteSignatureFromVault(sigId) {
+      if (!confirm("คุณต้องการลบลายเซ็นนี้ใช่หรือไม่?")) return;
+      showLoading("กำลังลบ...");
+      try {
+        await callGasApi("deleteSignatureFromStock", { sigId: sigId });
+        hideLoading();
+        renderVaultSignatures();
+        if (selectedDepartment === selectedVaultTab) loadDepartmentSignatures(selectedDepartment);
+      } catch(err) {
+        hideLoading();
+        alert(err.message);
+      }
+    }
+
+    function submitUploadSignature() {
+      const ownerName = document.getElementById('upload-owner-name').value.trim();
+      const fileInput = document.getElementById('upload-file-input');
+      const targetDept = document.getElementById('upload-dept-select').value;
+      if (!ownerName || !fileInput.files.length) return alert("กรอกข้อมูลและเลือกไฟล์ให้ครบ");
+
+      const reader = new FileReader();
+      showLoading("กำลังอัปโหลด...");
+      reader.onload = async (evt) => {
+        try {
+          await callGasApi("uploadSignatureToStock", { fileName: ownerName, department: targetDept, base64Data: evt.target.result });
+          hideLoading();
+          closeUploadModal();
+          selectedVaultTab = targetDept;
+          applyRoleRestrictions(); // refresh tabs state
+          renderVaultSignatures();
+          if (selectedDepartment === targetDept) loadDepartmentSignatures(targetDept);
+        } catch (err) {
+          hideLoading();
+          alert(err.message);
+        }
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    }
+
+    async function updateAnalyticsView() {
+      showLoading("กำลังดึงสถิติ...");
+      try {
+        const data = await callGasApi("getSigningStatistics");
+        hideLoading();
+        document.getElementById('stat-signed-count').textContent = data.totalSignedDocs + " ฉบับ";
+        document.getElementById('stat-total-sigs').textContent = data.totalSignaturesInStock + " รายการ";
+        
+        const list = document.getElementById('analytics-recent-list');
+        list.innerHTML = '';
+        if(data.recentActivities.length === 0) list.innerHTML = '<div class="py-4 text-center">ไม่มีประวัติ</div>';
+        data.recentActivities.forEach(item => {
+          list.innerHTML += `<div class="py-2.5 flex justify-between">
+            <div><p class="font-bold">${item.fileName}</p><p class="text-[10px] text-outline">${item.department} • วาง ${item.sigCount} จุด</p></div>
+            <div class="text-right"><span class="px-2 py-0.5 rounded-full text-[9px] bg-blue-100 text-blue-700">${item.actionType}</span><p class="text-[10px] text-outline mt-1">${item.timestamp}</p></div>
+          </div>`;
+        });
+      } catch (err) { hideLoading(); alert(err.message); }
+    }
+
+    // View Switching & Rendering (เหมือนเดิม)
+    function switchView(viewName) {
+      ['signing', 'vault', 'analytics'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+      document.getElementById(`view-${viewName}`).classList.remove('hidden');
+      if (viewName === 'signing' && pdfDoc) renderPage(currentPageNum);
+      if (viewName === 'vault') renderVaultSignatures();
+      if (viewName === 'analytics') updateAnalyticsView();
+    }
+    
+    function renderDepartmentGrid(list) {
+      const grid = document.getElementById('department-signature-grid');
+      grid.innerHTML = '';
+      if (!list.length) return grid.innerHTML = '<div class="col-span-2 text-center text-xs py-4">ไม่มีลายเซ็น</div>';
+      list.forEach(sig => {
+        grid.innerHTML += `<div class="p-2 rounded-2xl bg-white border hover:border-primary cursor-pointer" onclick="placeSignatureFromStock('${sig.dataUri}')">
+          <div class="h-12 flex items-center justify-center overflow-hidden"><img src="${sig.dataUri}" class="max-h-full"></div>
+          <span class="block text-[9px] text-center font-medium truncate mt-1">${sig.name}</span>
+        </div>`;
+      });
+    }
+
+    function displayVaultCards(list) {
+      const c = document.getElementById('vault-signatures-container');
+      c.innerHTML = '';
+      if (!list.length) return c.innerHTML = '<div class="col-span-full text-center py-12 text-outline">ยังไม่มีลายเซ็น</div>';
+      list.forEach(sig => {
+        c.innerHTML += `<div class="p-4 bg-white rounded-2xl border shadow-xs relative group">
+          <div class="h-24 flex items-center justify-center p-2 bg-surface-container-low rounded-xl mb-3"><img src="${sig.dataUri}" class="max-h-full"></div>
+          <p class="text-xs font-bold truncate">${sig.name}</p><span class="text-[10px]">สังกัด: ${sig.department}</span>
+          <button onclick="deleteSignatureFromVault('${sig.id}')" class="absolute top-2 right-2 p-1.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+        </div>`;
+      });
+    }
+
+    function openUploadModal() { document.getElementById('upload-sig-modal').classList.remove('hidden'); }
+    function closeUploadModal() { document.getElementById('upload-sig-modal').classList.add('hidden'); document.getElementById('upload-owner-name').value = ''; document.getElementById('upload-file-input').value = ''; }
+    
+    // PDF Viewer Logic (ส่วนเดิม)
+    function handlePdfUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      pdfFileName = file.name;
+      document.getElementById('header-filename').textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        placedSignatures = []; updatePlacedCountDisplay();
+        showLoading("โหลด PDF...");
+        try {
+          pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(evt.target.result) }).promise;
+          totalPages = pdfDoc.numPages; currentPageNum = 1;
+          await renderPage(currentPageNum);
+        } catch(err) { alert(err.message); }
+        hideLoading();
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    async function renderPage(pageNum) {
+      const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: currentZoom * 1.5 });
+      const canvas = document.getElementById('pdf-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = viewport.width; canvas.height = viewport.height;
+      const displayW = viewport.width / 1.5; const displayH = viewport.height / 1.5;
+      canvas.style.width = displayW + 'px'; canvas.style.height = displayH + 'px';
+      
+      const wrapper = document.getElementById('pdf-wrapper');
+      const sigContainer = document.getElementById('signature-boxes-container');
+      wrapper.style.width = displayW + 'px'; wrapper.style.height = displayH + 'px';
+      sigContainer.style.width = displayW + 'px'; sigContainer.style.height = displayH + 'px';
+
+      await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+      document.getElementById('page-num-display').textContent = `หน้า ${pageNum} / ${totalPages}`;
+      document.getElementById('zoom-display').textContent = `${Math.round(currentZoom * 100)}%`;
+      renderSignatureBoxesOnPage();
+    }
+
+    function changePage(d) { const t = currentPageNum + d; if (t >= 1 && t <= totalPages) { currentPageNum = t; renderPage(currentPageNum); } }
+    function zoomDoc(d) { const n = currentZoom + d; if (n >= 0.5 && n <= 2.2) { currentZoom = n; renderPage(currentPageNum); } }
+
+    function placeSignatureFromStock(uri) {
+      if(!pdfDoc) return alert("อัปโหลด PDF ก่อน");
+      placedSignatures.push({ id: 'sig_'+Date.now(), page: currentPageNum, x: 80, y: 120, width: 170, height: 65, dataUri: uri, confirmed: false });
+      updatePlacedCountDisplay(); renderSignatureBoxesOnPage();
+    }
+
+    function toggleTextCustomizerAccordion() {
+      const c = document.getElementById('text-customizer-content');
+      c.classList.toggle('hidden'); document.getElementById('accordion-icon').textContent = c.classList.contains('hidden') ? 'expand_more' : 'expand_less';
+    }
+    
+    function generateAndPlaceTextSignature() {
+      if(!pdfDoc) return alert("อัปโหลด PDF ก่อน");
+      const text = document.getElementById('custom-text-input').value.trim();
+      if(!text) return;
+      const c = document.createElement('canvas'); const ctx = c.getContext('2d');
+      ctx.font = '700 48px Inter';
+      const lines = text.split('\n'); c.width = Math.max(200, ctx.measureText(lines[0]).width + 40); c.height = Math.max(80, (lines.length * 60) + 30);
+      ctx.font = '700 48px Inter'; ctx.fillStyle = '#004ac6'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+      lines.forEach((l, i) => ctx.fillText(l, c.width/2, 25 + (i * 60) + 30));
+      placeSignatureFromStock(c.toDataURL('image/png'));
+    }
+
+    function updatePlacedCountDisplay() { document.getElementById('placed-count-display').textContent = `วางแล้ว ${placedSignatures.length} จุด`; }
+    function clearAllSignaturesOnPage() { placedSignatures = placedSignatures.filter(s => s.page !== currentPageNum); updatePlacedCountDisplay(); renderSignatureBoxesOnPage(); }
+    function removeSignatureItem(id) { placedSignatures = placedSignatures.filter(s => s.id !== id); updatePlacedCountDisplay(); renderSignatureBoxesOnPage(); }
+    function toggleConfirmSignature(id) { const s = placedSignatures.find(s => s.id === id); if(s) { s.confirmed = !s.confirmed; renderSignatureBoxesOnPage(); } }
+
+    function renderSignatureBoxesOnPage() {
+      const c = document.getElementById('signature-boxes-container'); c.innerHTML = '';
+      placedSignatures.filter(s => s.page === currentPageNum).forEach(sig => {
+        const box = document.createElement('div');
+        box.className = `placed-sig-box rounded-xl group pointer-events-auto ${sig.confirmed ? 'confirmed-box' : 'active-box'}`;
+        box.style = `left:${sig.x}px; top:${sig.y}px; width:${sig.width}px; height:${sig.height}px;`;
+        box.innerHTML = `<img src="${sig.dataUri}" class="w-full h-full object-contain p-1.5 pointer-events-none">
+          <button onclick="removeSignatureItem('${sig.id}')" class="absolute -top-3 -left-3 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center z-50"><span class="material-symbols-outlined text-[14px]">close</span></button>
+          <button onclick="toggleConfirmSignature('${sig.id}')" class="absolute -top-3 -right-3 h-6 px-2 rounded-full ${sig.confirmed ? 'bg-green-600' : 'bg-primary'} text-white text-[11px] font-bold z-50">${sig.confirmed ? 'ยืนยันแล้ว' : 'ยืนยัน'}</button>
+          <div class="sig-resize-handle"></div>`;
+        setupBoxInteractions(box, sig); c.appendChild(box);
+      });
+    }
+
+    function setupBoxInteractions(box, sig) {
+      let isDrag = false, isRes = false, sX = 0, sY = 0, iX = 0, iY = 0, iW = 0, iH = 0;
+      box.onmousedown = e => {
+        if(e.target.closest('button') || e.target.classList.contains('sig-resize-handle')) return;
+        isDrag = true; sX = e.clientX; sY = e.clientY; iX = sig.x; iY = sig.y;
+        const mm = ev => { if(!isDrag) return; sig.x = Math.max(0, iX + ev.clientX - sX); sig.y = Math.max(0, iY + ev.clientY - sY); box.style.left = sig.x+'px'; box.style.top = sig.y+'px'; };
+        const mu = () => { isDrag = false; document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); };
+        document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu); e.preventDefault();
+      };
+      box.querySelector('.sig-resize-handle').onmousedown = e => {
+        isRes = true; sX = e.clientX; sY = e.clientY; iW = sig.width; iH = sig.height;
+        const mm = ev => { if(!isRes) return; sig.width = Math.max(60, iW + ev.clientX - sX); sig.height = Math.max(25, iH + ev.clientY - sY); box.style.width = sig.width+'px'; box.style.height = sig.height+'px'; };
+        const mu = () => { isRes = false; document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); };
+        document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu); e.stopPropagation(); e.preventDefault();
+      };
+    }
+
+    async function downloadSignedPdfDocument() {
+      if(!pdfDoc || !placedSignatures.length) return alert("วางลายเซ็นก่อน");
+      showLoading("กำลังสร้าง PDF...");
+      try {
+        const { jsPDF } = window.jspdf; let pdfOutput = null;
+        for (let i = 1; i <= totalPages; i++) {
+          const page = await pdfDoc.getPage(i); const vp = page.getViewport({ scale: 3.5 });
+          const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; const ctx = c.getContext('2d');
+          await page.render({ canvasContext: ctx, viewport: vp }).promise;
+          const ratioX = vp.width / parseFloat(document.getElementById('pdf-canvas').style.width);
+          
+          for(const sig of placedSignatures.filter(s => s.page === i)) {
+            const img = new Image(); img.src = sig.dataUri; await new Promise(r => img.onload = r);
+            ctx.drawImage(img, sig.x * ratioX, sig.y * ratioX, sig.width * ratioX, sig.height * ratioX);
+          }
+          
+          const imgData = c.toDataURL('image/jpeg', 0.98); const wPt = vp.width/3.5; const hPt = vp.height/3.5;
+          if (i === 1) { pdfOutput = new jsPDF({ orientation: wPt>hPt?'l':'p', unit: 'pt', format: [wPt, hPt], compress: true }); pdfOutput.addImage(imgData, 'JPEG', 0, 0, wPt, hPt); }
+          else { pdfOutput.addPage([wPt, hPt], wPt>hPt?'l':'p'); pdfOutput.addImage(imgData, 'JPEG', 0, 0, wPt, hPt); }
+        }
+        pdfOutput.save(`Signed_${pdfFileName.replace(/\.[^/.]+$/, "")}.pdf`);
+        callGasApi("logSigningAction", { fileName: pdfFileName, department: selectedDepartment, sigCount: placedSignatures.length, actionType: "ดาวน์โหลด PDF" }).catch(()=>{});
+        hideLoading();
+      } catch (err) { hideLoading(); alert(err.message); }
+    }
+  </script>
+</body>
+</html>

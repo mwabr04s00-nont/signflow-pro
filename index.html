@@ -34,6 +34,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- นำเข้า Chart.js สำหรับวาดกราฟ -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', 'Sarabun', sans-serif; }
@@ -299,12 +301,20 @@
             <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20"><span class="text-xs text-outline font-medium">เอกสารลงนามทั้งหมด</span><p class="text-3xl font-extrabold text-primary" id="stat-signed-count">0 ฉบับ</p></div>
             <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20"><span class="text-xs text-outline font-medium">ลายเซ็นทั้งหมดในคลัง</span><p class="text-3xl font-extrabold" id="stat-total-sigs">0 รายการ</p></div>
           </div>
-          
-          <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20 space-y-4">
-            <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">corporate_fare</span> จำนวนการลงนามแยกตามหน่วยงาน</h3>
-            <div id="analytics-dept-breakdown" class="grid grid-cols-1 sm:grid-cols-5 gap-3 mt-4"></div>
-          </div>
 
+          <!-- ส่วนกราฟสถิติ (Pie & Bar) -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20 space-y-4">
+              <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">pie_chart</span> สัดส่วนลายเซ็นในคลัง (แยกหน่วยงาน)</h3>
+              <div class="relative h-56 w-full flex justify-center"><canvas id="vaultChartPie"></canvas></div>
+            </div>
+            
+            <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20 space-y-4">
+              <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">bar_chart</span> จำนวนการลงนามจริง (แยกหน่วยงาน)</h3>
+              <div class="relative h-56 w-full flex justify-center"><canvas id="signingChartBar"></canvas></div>
+            </div>
+          </div>
+          
           <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20 space-y-4">
             <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">history</span> ประวัติการลงนามล่าสุด</h3>
             <div id="analytics-recent-list" class="divide-y text-xs text-on-surface"></div>
@@ -352,6 +362,7 @@
     // Auth State
     let authCredentials = { username: "", password: "" };
     let currentUserRole = null; 
+    let isChangingPage = false; // ป้องกัน Scroll เปลี่ยนหน้าถี่เกินไป
 
     // App State
     let pdfDoc = null, currentPageNum = 1, totalPages = 0, currentZoom = 1.0;
@@ -536,32 +547,35 @@
         document.getElementById('stat-signed-count').textContent = data.totalSignedDocs + " ฉบับ";
         document.getElementById('stat-total-sigs').textContent = data.totalSignaturesInStock + " รายการ";
         
-        // Render Department Cards with subtle colors
-        const deptContainer = document.getElementById('analytics-dept-breakdown');
-        if (deptContainer) {
-          deptContainer.innerHTML = '';
-          const cardThemes = [
-            { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700' },
-            { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700' },
-            { bg: 'bg-purple-50', border: 'border-purple-100', text: 'text-purple-700' },
-            { bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-700' },
-            { bg: 'bg-rose-50', border: 'border-rose-100', text: 'text-rose-700' }
-          ];
-          
-          DEPARTMENTS.forEach((dept, idx) => {
-            const count = data.departmentStats[dept] || 0;
-            const theme = cardThemes[idx % cardThemes.length];
-            deptContainer.innerHTML += `
-              <div class="p-3.5 ${theme.bg} rounded-xl border ${theme.border} flex flex-col justify-between transition hover:shadow-sm">
-                <span class="text-xs font-semibold text-on-surface truncate">${dept}</span>
-                <div class="mt-2 flex items-baseline justify-between">
-                  <span class="text-xl font-bold ${theme.text}">${count}</span>
-                  <span class="text-[10px] text-outline font-medium">ฉบับ</span>
-                </div>
-              </div>
-            `;
-          });
-        }
+        // วาดกราฟวงกลม (Pie Chart) สำหรับลายเซ็นในคลัง
+        if (window.vaultPieChart) window.vaultPieChart.destroy();
+        window.vaultPieChart = new Chart(document.getElementById('vaultChartPie').getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: DEPARTMENTS,
+                datasets: [{
+                    data: DEPARTMENTS.map(d => data.vaultStats ? data.vaultStats[d] || 0 : 0),
+                    backgroundColor: ['#3b82f6', '#10b981', '#a855f7', '#f59e0b', '#f43f5e']
+                }]
+            },
+            options: { maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 10, family: 'Inter' } } } } }
+        });
+
+        // วาดกราฟแนวนอน (Horizontal Bar Chart) สำหรับการลงนาม
+        if (window.signingBarChart) window.signingBarChart.destroy();
+        window.signingBarChart = new Chart(document.getElementById('signingChartBar').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: DEPARTMENTS,
+                datasets: [{
+                    label: 'จำนวนฉบับที่ลงนาม',
+                    data: DEPARTMENTS.map(d => data.departmentStats[d] || 0),
+                    backgroundColor: '#004ac6',
+                    borderRadius: 4
+                }]
+            },
+            options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { stepSize: 1 } }, y: { ticks: { font: { size: 10, family: 'Inter' } } } } }
+        });
 
         const list = document.getElementById('analytics-recent-list');
         list.innerHTML = '';
@@ -646,10 +660,26 @@
           totalPages = pdfDoc.numPages; currentPageNum = 1;
           await renderPage(currentPageNum);
           renderThumbnails(); // กู้คืนฟังก์ชันสร้าง Thumbnail
+          setupScrollNavigation(); // เรียกใช้งานระบบ Scroll เปลียนหน้า
         } catch(err) { alert(err.message); }
         hideLoading();
       };
       reader.readAsArrayBuffer(file);
+    }
+
+    // ฟังก์ชันระบบ Scroll เปลี่ยนหน้า
+    function setupScrollNavigation() {
+      const container = document.getElementById('viewport-container');
+      container.addEventListener('wheel', (e) => {
+        if (isChangingPage) return;
+        const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 5;
+        const isAtTop = container.scrollTop <= 5;
+        if (e.deltaY > 0 && isAtBottom && currentPageNum < totalPages) {
+           isChangingPage = true; changePage(1); setTimeout(() => isChangingPage = false, 600);
+        } else if (e.deltaY < 0 && isAtTop && currentPageNum > 1) {
+           isChangingPage = true; changePage(-1); setTimeout(() => isChangingPage = false, 600);
+        }
+      });
     }
 
     async function renderPage(pageNum) {
@@ -674,7 +704,23 @@
     }
 
     function changePage(d) { const t = currentPageNum + d; if (t >= 1 && t <= totalPages) { currentPageNum = t; renderPage(currentPageNum); } }
-    function zoomDoc(d) { const n = currentZoom + d; if (n >= 0.5 && n <= 2.2) { currentZoom = n; renderPage(currentPageNum); } }
+    
+    // อัปเดตสเกลลายเซ็นเมื่อย่อ/ขยายเอกสาร (ป้องกันสเกลเพี้ยน)
+    function zoomDoc(d) { 
+      const oldZoom = currentZoom;
+      const n = currentZoom + d; 
+      if (n >= 0.5 && n <= 2.2) { 
+        currentZoom = n; 
+        const scaleRatio = currentZoom / oldZoom;
+        placedSignatures.forEach(sig => {
+           sig.x *= scaleRatio;
+           sig.y *= scaleRatio;
+           sig.width *= scaleRatio;
+           sig.height *= scaleRatio;
+        });
+        renderPage(currentPageNum); 
+      } 
+    }
 
     // --- กู้คืนส่วนของ Thumbnails ---
     async function renderThumbnails() {
@@ -720,10 +766,34 @@
     }
     // ---------------------------------
 
+    // คำนวณพิกัดกลางจอเสมอ
+    function getCenterPlacementCoordinates(sigWidth, sigHeight) {
+      const container = document.getElementById('viewport-container');
+      const wrapper = document.getElementById('pdf-wrapper');
+      if (!container || !wrapper) return { x: 80, y: 120 };
+
+      const rect = wrapper.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+
+      // หาจุดศูนย์กลางของพื้นที่ที่มองเห็น (Visible Area)
+      const visibleCenterX = containerRect.left + containerRect.width / 2;
+      const visibleCenterY = containerRect.top + containerRect.height / 2;
+
+      let targetX = visibleCenterX - rect.left - (sigWidth / 2);
+      let targetY = visibleCenterY - rect.top - (sigHeight / 2);
+
+      // ดึงให้อยู่ในกรอบกระดาษเสมอ
+      targetX = Math.max(0, Math.min(targetX, rect.width - sigWidth));
+      targetY = Math.max(0, Math.min(targetY, rect.height - sigHeight));
+
+      const offset = (placedSignatures.filter(s => s.page === currentPageNum).length * 25) % 100;
+      return { x: targetX + offset, y: targetY + offset };
+    }
+
     function placeSignatureFromStock(uri) {
       if(!pdfDoc) return alert("อัปโหลด PDF ก่อน");
-      const offset = (placedSignatures.filter(s => s.page === currentPageNum).length * 25) % 150;
-      placedSignatures.push({ id: 'sig_'+Date.now(), page: currentPageNum, x: 80 + offset, y: 120 + offset, width: 170, height: 65, dataUri: uri, confirmed: false });
+      const coords = getCenterPlacementCoordinates(170, 65);
+      placedSignatures.push({ id: 'sig_'+Date.now(), page: currentPageNum, x: coords.x, y: coords.y, width: 170, height: 65, dataUri: uri, confirmed: false });
       updatePlacedCountDisplay(); renderSignatureBoxesOnPage();
     }
 
@@ -789,15 +859,17 @@
       });
 
       const textDataUri = canvas.toDataURL('image/png');
-      const offset = (placedSignatures.filter(s => s.page === currentPageNum).length * 25) % 150;
+      const w = Math.min(220, Math.max(160, canvas.width / 2));
+      const h = Math.max(65, canvas.height / 2);
+      const coords = getCenterPlacementCoordinates(w, h);
       
       placedSignatures.push({
         id: 'sig_' + Date.now(),
         page: currentPageNum,
-        x: 80 + offset,
-        y: 120 + offset,
-        width: Math.min(220, Math.max(160, canvas.width / 2)),
-        height: Math.max(65, canvas.height / 2),
+        x: coords.x,
+        y: coords.y,
+        width: w,
+        height: h,
         dataUri: textDataUri,
         confirmed: false
       });
@@ -863,12 +935,13 @@
           const page = await pdfDoc.getPage(i); const vp = page.getViewport({ scale: 3.5 });
           const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; const ctx = c.getContext('2d');
           await page.render({ canvasContext: ctx, viewport: vp }).promise;
-          const ratioX = vp.width / parseFloat(document.getElementById('pdf-canvas').style.width);
-          const ratioY = vp.height / parseFloat(document.getElementById('pdf-canvas').style.height); // แก้ไขคืนค่า ratioY
+          
+          // ล็อคสัดส่วนเป๊ะๆ โดยคูณจาก Zoom ปัจจุบัน
+          const exportRatio = 3.5 / currentZoom; 
           
           for(const sig of placedSignatures.filter(s => s.page === i)) {
             const img = new Image(); img.src = sig.dataUri; await new Promise(r => img.onload = r);
-            ctx.drawImage(img, sig.x * ratioX, sig.y * ratioY, sig.width * ratioX, sig.height * ratioY); // ปรับการคูณ Y และ Height ให้ถูกสัดส่วน
+            ctx.drawImage(img, sig.x * exportRatio, sig.y * exportRatio, sig.width * exportRatio, sig.height * exportRatio);
           }
           pagesHtml += `<div class="print-page"><img src="${c.toDataURL('image/jpeg', 0.98)}" /></div>`;
         }
@@ -894,12 +967,13 @@
           const page = await pdfDoc.getPage(i); const vp = page.getViewport({ scale: 3.5 });
           const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; const ctx = c.getContext('2d');
           await page.render({ canvasContext: ctx, viewport: vp }).promise;
-          const ratioX = vp.width / parseFloat(document.getElementById('pdf-canvas').style.width);
-          const ratioY = vp.height / parseFloat(document.getElementById('pdf-canvas').style.height); // แก้ไขคืนค่า ratioY
+          
+          // ล็อคสัดส่วนเป๊ะๆ โดยคูณจาก Zoom ปัจจุบัน
+          const exportRatio = 3.5 / currentZoom; 
           
           for(const sig of placedSignatures.filter(s => s.page === i)) {
             const img = new Image(); img.src = sig.dataUri; await new Promise(r => img.onload = r);
-            ctx.drawImage(img, sig.x * ratioX, sig.y * ratioY, sig.width * ratioX, sig.height * ratioY); // ปรับการคูณ Y และ Height ให้ถูกสัดส่วน
+            ctx.drawImage(img, sig.x * exportRatio, sig.y * exportRatio, sig.width * exportRatio, sig.height * exportRatio); 
           }
           
           const imgData = c.toDataURL('image/jpeg', 0.98); const wPt = vp.width/3.5; const hPt = vp.height/3.5;

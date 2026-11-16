@@ -44,9 +44,9 @@
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #c3c6d7; border-radius: 9999px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #737686; }
 
-    .placed-sig-box { position: absolute; cursor: move; user-select: none; transition: border-color 0.15s, box-shadow 0.15s; }
-    .placed-sig-box.active-box { border: 2px dashed #004ac6; background-color: rgba(0, 74, 198, 0.05); z-index: 40; }
-    .placed-sig-box.confirmed-box { border: 2px solid #16a34a; background-color: rgba(22, 163, 74, 0.03); z-index: 30; }
+    .placed-sig-box { position: absolute; cursor: move; user-select: none; transition: box-shadow 0.15s, background-color 0.15s; }
+    .placed-sig-box.active-box { box-shadow: 0 0 0 2px #004ac6; background-color: rgba(0, 74, 198, 0.05); z-index: 40; }
+    .placed-sig-box.confirmed-box { box-shadow: 0 0 0 2px #16a34a; background-color: rgba(22, 163, 74, 0.03); z-index: 30; }
 
     .sig-resize-handle {
       position: absolute; right: -6px; bottom: -6px; width: 14px; height: 14px;
@@ -124,12 +124,12 @@
           <span class="material-symbols-outlined text-primary text-2xl font-bold">signature</span>
           <span class="text-xl font-bold text-on-surface tracking-tight">SignFlow Pro</span>
         </div>
-        <div id="header-doc-chip" class="flex items-center gap-2 bg-surface-container-low px-3.5 py-1.5 rounded-xl border border-outline-variant/20 shadow-xs max-w-[240px]">
-          <span class="material-symbols-outlined text-primary text-lg flex-shrink-0">upload_file</span>
-          <span class="text-xs font-semibold truncate" id="header-filename">ยังไม่ได้เลือกเอกสาร</span>
-          <button onclick="document.getElementById('pdf-file-input').click()" class="p-0.5 rounded text-outline hover:text-on-surface">
-            <span class="material-symbols-outlined text-sm">swap_horiz</span>
+        <div class="flex items-center gap-3 bg-surface-container-low px-3 py-1.5 rounded-xl border border-outline-variant/20 shadow-xs">
+          <button onclick="document.getElementById('pdf-file-input').click()" class="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 hover:bg-primary/90 transition">
+            <span class="material-symbols-outlined text-[16px]">upload_file</span> เปิดไฟล์ PDF
           </button>
+          <div class="w-[1px] h-5 bg-outline-variant/50"></div>
+          <span class="text-xs font-semibold text-on-surface truncate max-w-[150px] sm:max-w-[200px]" id="header-filename">ยังไม่ได้เลือกเอกสาร</span>
           <input type="file" id="pdf-file-input" accept="application/pdf" class="hidden" onchange="handlePdfUpload(event)">
         </div>
       </div>
@@ -297,26 +297,31 @@
             <h2 class="text-2xl font-bold text-on-surface">สถิติการลงนามเอกสาร</h2>
             <button onclick="updateAnalyticsView()" class="px-3 py-1.5 bg-white border rounded-xl text-xs font-semibold text-primary"><span class="material-symbols-outlined text-sm">refresh</span> รีเฟรชข้อมูล</button>
           </div>
+          
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20"><span class="text-xs text-outline font-medium">เอกสารลงนามทั้งหมด</span><p class="text-3xl font-extrabold text-primary" id="stat-signed-count">0 ฉบับ</p></div>
-            <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20"><span class="text-xs text-outline font-medium">ลายเซ็นทั้งหมดในคลัง</span><p class="text-3xl font-extrabold" id="stat-total-sigs">0 รายการ</p></div>
+            <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20"><span class="text-xs text-outline font-medium">เอกสารลงนามสำเร็จทั้งหมด</span><p class="text-3xl font-extrabold text-primary" id="stat-signed-count">0 ฉบับ</p></div>
+            <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20"><span class="text-xs text-outline font-medium">ลายเซ็นทั้งหมดในคลัง (ทุกหน่วยงาน)</span><p class="text-3xl font-extrabold" id="stat-total-sigs">0 รายการ</p></div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3" id="analytics-dept-breakdown">
+             <!-- injected via JS -->
           </div>
 
           <!-- ส่วนกราฟสถิติ (Pie & Bar) -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20 space-y-4">
-              <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">pie_chart</span> สัดส่วนลายเซ็นในคลัง (แยกหน่วยงาน)</h3>
-              <div class="relative h-56 w-full flex justify-center"><canvas id="vaultChartPie"></canvas></div>
+              <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">pie_chart</span> สัดส่วนการลงนามจริง (แยกหน่วยงาน)</h3>
+              <div class="relative h-56 w-full flex justify-center"><canvas id="signingChartPie"></canvas></div>
             </div>
             
             <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20 space-y-4">
-              <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">bar_chart</span> จำนวนการลงนามจริง (แยกหน่วยงาน)</h3>
-              <div class="relative h-56 w-full flex justify-center"><canvas id="signingChartBar"></canvas></div>
+              <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">bar_chart</span> จำนวนลายเซ็นในคลัง (แยกหน่วยงาน)</h3>
+              <div class="relative h-56 w-full flex justify-center"><canvas id="vaultChartBar"></canvas></div>
             </div>
           </div>
           
           <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20 space-y-4">
-            <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">history</span> ประวัติการลงนามล่าสุด</h3>
+            <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">history</span> ประวัติการลงนามล่าสุด (50 รายการ)</h3>
             <div id="analytics-recent-list" class="divide-y text-xs text-on-surface"></div>
           </div>
         </div>
@@ -547,29 +552,43 @@
         document.getElementById('stat-signed-count').textContent = data.totalSignedDocs + " ฉบับ";
         document.getElementById('stat-total-sigs').textContent = data.totalSignaturesInStock + " รายการ";
         
-        // วาดกราฟวงกลม (Pie Chart) สำหรับลายเซ็นในคลัง
-        if (window.vaultPieChart) window.vaultPieChart.destroy();
-        window.vaultPieChart = new Chart(document.getElementById('vaultChartPie').getContext('2d'), {
+        const deptContainer = document.getElementById('analytics-dept-breakdown');
+        deptContainer.innerHTML = '';
+        DEPARTMENTS.forEach(dept => {
+          const count = data.vaultStats ? (data.vaultStats[dept] || 0) : 0;
+          deptContainer.innerHTML += `
+            <div class="p-3.5 bg-surface-container-low rounded-xl border border-outline-variant/20 flex flex-col justify-between">
+              <span class="text-xs font-semibold text-on-surface truncate">${dept}</span>
+              <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-xl font-bold text-primary">${count}</span>
+                <span class="text-[10px] text-outline font-medium">รายการ</span>
+              </div>
+            </div>`;
+        });
+
+        // วาดกราฟวงกลม (Pie Chart) สำหรับสัดส่วนการลงนามจริง
+        if (window.signingPieChart) window.signingPieChart.destroy();
+        window.signingPieChart = new Chart(document.getElementById('signingChartPie').getContext('2d'), {
             type: 'pie',
             data: {
                 labels: DEPARTMENTS,
                 datasets: [{
-                    data: DEPARTMENTS.map(d => data.vaultStats ? data.vaultStats[d] || 0 : 0),
+                    data: DEPARTMENTS.map(d => data.departmentStats[d] || 0),
                     backgroundColor: ['#3b82f6', '#10b981', '#a855f7', '#f59e0b', '#f43f5e']
                 }]
             },
             options: { maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 10, family: 'Inter' } } } } }
         });
 
-        // วาดกราฟแนวนอน (Horizontal Bar Chart) สำหรับการลงนาม
-        if (window.signingBarChart) window.signingBarChart.destroy();
-        window.signingBarChart = new Chart(document.getElementById('signingChartBar').getContext('2d'), {
+        // วาดกราฟแนวนอน (Horizontal Bar Chart) สำหรับจำนวนลายเซ็นในคลัง
+        if (window.vaultBarChart) window.vaultBarChart.destroy();
+        window.vaultBarChart = new Chart(document.getElementById('vaultChartBar').getContext('2d'), {
             type: 'bar',
             data: {
                 labels: DEPARTMENTS,
                 datasets: [{
-                    label: 'จำนวนฉบับที่ลงนาม',
-                    data: DEPARTMENTS.map(d => data.departmentStats[d] || 0),
+                    label: 'จำนวนลายเซ็นในคลัง',
+                    data: DEPARTMENTS.map(d => data.vaultStats ? data.vaultStats[d] || 0 : 0),
                     backgroundColor: '#004ac6',
                     borderRadius: 4
                 }]
@@ -888,7 +907,7 @@
         const box = document.createElement('div');
         box.className = `placed-sig-box rounded-xl group pointer-events-auto ${sig.confirmed ? 'confirmed-box' : 'active-box'}`;
         box.style = `left:${sig.x}px; top:${sig.y}px; width:${sig.width}px; height:${sig.height}px;`;
-        box.innerHTML = `<img src="${sig.dataUri}" class="w-full h-full object-contain p-1.5 pointer-events-none">
+        box.innerHTML = `<img src="${sig.dataUri}" class="w-full h-full object-contain pointer-events-none">
           <button onclick="removeSignatureItem('${sig.id}')" class="absolute -top-3 -left-3 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center z-50"><span class="material-symbols-outlined text-[14px]">close</span></button>
           <button onclick="toggleConfirmSignature('${sig.id}')" class="absolute -top-3 -right-3 h-6 px-2 rounded-full ${sig.confirmed ? 'bg-green-600' : 'bg-primary'} text-white text-[11px] font-bold z-50">${sig.confirmed ? 'ยืนยันแล้ว' : 'ยืนยัน'}</button>
           <div class="sig-resize-handle"></div>`;

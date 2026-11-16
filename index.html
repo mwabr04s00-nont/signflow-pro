@@ -307,21 +307,23 @@
              <!-- injected via JS -->
           </div>
 
-          <!-- ส่วนกราฟสถิติ (Pie & Bar) -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- ส่วนกราฟสถิติ (Pie) -->
+          <div class="grid grid-cols-1 gap-4">
             <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20 space-y-4">
               <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">pie_chart</span> สัดส่วนการลงนามจริง (แยกหน่วยงาน)</h3>
-              <div class="relative h-56 w-full flex justify-center"><canvas id="signingChartPie"></canvas></div>
-            </div>
-            
-            <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20 space-y-4">
-              <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">bar_chart</span> จำนวนลายเซ็นในคลัง (แยกหน่วยงาน)</h3>
-              <div class="relative h-56 w-full flex justify-center"><canvas id="vaultChartBar"></canvas></div>
+              <div class="relative h-64 w-full flex justify-center"><canvas id="signingChartPie"></canvas></div>
             </div>
           </div>
           
           <div class="p-5 bg-white rounded-2xl shadow-xs border border-outline-variant/20 space-y-4">
-            <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">history</span> ประวัติการลงนามล่าสุด (50 รายการ)</h3>
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">history</span> ประวัติการลงนามล่าสุด</h3>
+              <select id="history-limit-select" onchange="changeHistoryLimit(this.value)" class="text-xs p-1.5 border border-outline-variant/30 rounded-lg bg-surface-container-low text-on-surface focus:outline-none">
+                 <option value="10">10 รายการ</option>
+                 <option value="25">25 รายการ</option>
+                 <option value="50" selected>50 รายการ</option>
+              </select>
+            </div>
             <div id="analytics-recent-list" class="divide-y text-xs text-on-surface"></div>
           </div>
         </div>
@@ -373,6 +375,7 @@
     let pdfDoc = null, currentPageNum = 1, totalPages = 0, currentZoom = 1.0;
     let selectedDepartment = "ส่วนกลาง", selectedVaultTab = "ส่วนกลาง";
     let allSignaturesCache = {}, pdfFileName = "Document.pdf", placedSignatures = [];
+    let currentRecentActivities = []; // เพิ่มตัวแปรสำหรับเก็บประวัติไว้เปลี่ยนหน้า
     
     // UI Setup States
     let leftOpen = true;
@@ -554,58 +557,86 @@
         
         const deptContainer = document.getElementById('analytics-dept-breakdown');
         deptContainer.innerHTML = '';
-        DEPARTMENTS.forEach(dept => {
-          const count = data.vaultStats ? (data.vaultStats[dept] || 0) : 0;
+        
+        // ชุดสีพาสเทลสวยงามสบายตา
+        const pastelColors = [
+          'bg-blue-50 border-blue-200 text-blue-800',
+          'bg-emerald-50 border-emerald-200 text-emerald-800',
+          'bg-purple-50 border-purple-200 text-purple-800',
+          'bg-amber-50 border-amber-200 text-amber-800',
+          'bg-rose-50 border-rose-200 text-rose-800'
+        ];
+
+        DEPARTMENTS.forEach((dept, index) => {
+          // ใช้ยอดลงนามจริง (departmentStats) แทนยอดในคลัง
+          const count = data.departmentStats ? (data.departmentStats[dept] || 0) : 0;
+          const colorClass = pastelColors[index % pastelColors.length];
           deptContainer.innerHTML += `
-            <div class="p-3.5 bg-surface-container-low rounded-xl border border-outline-variant/20 flex flex-col justify-between">
-              <span class="text-xs font-semibold text-on-surface truncate">${dept}</span>
+            <div class="p-3.5 rounded-xl border flex flex-col justify-between shadow-xs ${colorClass}">
+              <span class="text-xs font-bold truncate opacity-80">${dept}</span>
               <div class="mt-2 flex items-baseline justify-between">
-                <span class="text-xl font-bold text-primary">${count}</span>
-                <span class="text-[10px] text-outline font-medium">รายการ</span>
+                <span class="text-2xl font-extrabold">${count}</span>
+                <span class="text-[10px] font-medium opacity-80">ฉบับ</span>
               </div>
             </div>`;
         });
 
-        // วาดกราฟวงกลม (Pie Chart) สำหรับสัดส่วนการลงนามจริง
+        // วาดกราฟวงกลม (Pie Chart) แบบมีมิติ
         if (window.signingPieChart) window.signingPieChart.destroy();
         window.signingPieChart = new Chart(document.getElementById('signingChartPie').getContext('2d'), {
-            type: 'pie',
+            type: 'doughnut',
             data: {
                 labels: DEPARTMENTS,
                 datasets: [{
                     data: DEPARTMENTS.map(d => data.departmentStats[d] || 0),
-                    backgroundColor: ['#3b82f6', '#10b981', '#a855f7', '#f59e0b', '#f43f5e']
+                    backgroundColor: ['#3b82f6', '#10b981', '#a855f7', '#f59e0b', '#f43f5e'],
+                    borderWidth: 3,
+                    borderColor: '#ffffff',
+                    hoverOffset: 8
                 }]
             },
-            options: { maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 10, family: 'Inter' } } } } }
+            options: { 
+              maintainAspectRatio: false, 
+              cutout: '55%',
+              plugins: { 
+                legend: { 
+                  position: 'right', 
+                  labels: { 
+                    usePointStyle: true, 
+                    pointStyle: 'circle', 
+                    font: { size: 12, family: 'Inter' },
+                    padding: 20
+                  } 
+                } 
+              },
+              layout: { padding: 10 }
+            }
         });
 
-        // วาดกราฟแนวนอน (Horizontal Bar Chart) สำหรับจำนวนลายเซ็นในคลัง
-        if (window.vaultBarChart) window.vaultBarChart.destroy();
-        window.vaultBarChart = new Chart(document.getElementById('vaultChartBar').getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: DEPARTMENTS,
-                datasets: [{
-                    label: 'จำนวนลายเซ็นในคลัง',
-                    data: DEPARTMENTS.map(d => data.vaultStats ? data.vaultStats[d] || 0 : 0),
-                    backgroundColor: '#004ac6',
-                    borderRadius: 4
-                }]
-            },
-            options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { stepSize: 1 } }, y: { ticks: { font: { size: 10, family: 'Inter' } } } } }
-        });
+        // ลบกราฟแนวนอนออก และบันทึกประวัติเพื่อเปลี่ยนลิมิต
+        currentRecentActivities = data.recentActivities || [];
+        changeHistoryLimit(document.getElementById('history-limit-select').value);
 
-        const list = document.getElementById('analytics-recent-list');
-        list.innerHTML = '';
-        if(data.recentActivities.length === 0) list.innerHTML = '<div class="py-4 text-center">ไม่มีประวัติ</div>';
-        data.recentActivities.forEach(item => {
-          list.innerHTML += `<div class="py-2.5 flex justify-between">
-            <div><p class="font-bold">${item.fileName}</p><p class="text-[10px] text-outline">${item.department} • วาง ${item.sigCount} จุด</p></div>
-            <div class="text-right"><span class="px-2 py-0.5 rounded-full text-[9px] bg-blue-100 text-blue-700">${item.actionType}</span><p class="text-[10px] text-outline mt-1">${item.timestamp}</p></div>
-          </div>`;
-        });
       } catch (err) { hideLoading(); alert(err.message); }
+    }
+
+    // ฟังก์ชันสำหรับสลับจำนวนรายการประวัติ
+    function changeHistoryLimit(limitStr) {
+      const limit = parseInt(limitStr, 10);
+      const list = document.getElementById('analytics-recent-list');
+      list.innerHTML = '';
+      if(currentRecentActivities.length === 0) {
+        list.innerHTML = '<div class="py-4 text-center text-outline">ไม่มีประวัติ</div>';
+        return;
+      }
+      
+      const displayItems = currentRecentActivities.slice(0, limit);
+      displayItems.forEach(item => {
+        list.innerHTML += `<div class="py-2.5 flex justify-between items-center">
+          <div><p class="font-bold">${item.fileName}</p><p class="text-[10px] text-outline">${item.department} • วาง ${item.sigCount} จุด</p></div>
+          <div class="text-right"><span class="px-2 py-0.5 rounded-full text-[9px] bg-surface-container border border-outline-variant/30 text-on-surface shadow-sm font-medium">${item.actionType}</span><p class="text-[10px] text-outline mt-1">${item.timestamp}</p></div>
+        </div>`;
+      });
     }
 
     // View Switching & Navigation Toggles
@@ -809,11 +840,23 @@
       return { x: targetX + offset, y: targetY + offset };
     }
 
+    // แก้ไขการวางลายเซ็นให้คำนวณอัตราส่วนภาพดั้งเดิมก่อนวางเสมอ
     function placeSignatureFromStock(uri) {
       if(!pdfDoc) return alert("อัปโหลด PDF ก่อน");
-      const coords = getCenterPlacementCoordinates(170, 65);
-      placedSignatures.push({ id: 'sig_'+Date.now(), page: currentPageNum, x: coords.x, y: coords.y, width: 170, height: 65, dataUri: uri, confirmed: false });
-      updatePlacedCountDisplay(); renderSignatureBoxesOnPage();
+      const img = new Image();
+      img.onload = () => {
+         // หาอัตราส่วนแท้จริงของภาพ
+         const aspect = img.width / img.height;
+         let w = 170 * currentZoom;
+         let h = w / aspect;
+         // ล็อกความสูงไม่ให้เกินกรอบ
+         if (h > 80 * currentZoom) { h = 80 * currentZoom; w = h * aspect; }
+         
+         const coords = getCenterPlacementCoordinates(w, h);
+         placedSignatures.push({ id: 'sig_'+Date.now(), page: currentPageNum, x: coords.x, y: coords.y, width: w, height: h, dataUri: uri, confirmed: false });
+         updatePlacedCountDisplay(); renderSignatureBoxesOnPage();
+      };
+      img.src = uri;
     }
 
     // Text Customizer Logic
@@ -955,12 +998,28 @@
           const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; const ctx = c.getContext('2d');
           await page.render({ canvasContext: ctx, viewport: vp }).promise;
           
-          // ล็อคสัดส่วนเป๊ะๆ โดยคูณจาก Zoom ปัจจุบัน
           const exportRatio = 3.5 / currentZoom; 
           
           for(const sig of placedSignatures.filter(s => s.page === i)) {
             const img = new Image(); img.src = sig.dataUri; await new Promise(r => img.onload = r);
-            ctx.drawImage(img, sig.x * exportRatio, sig.y * exportRatio, sig.width * exportRatio, sig.height * exportRatio);
+            
+            // แก้ไขการวาดให้รักษาสัดส่วนภาพ 100% ไม่ให้ยืดออกด้านข้าง (จำลอง Object-contain)
+            const imgRatio = img.width / img.height;
+            const boxRatio = sig.width / sig.height;
+            let drawW = sig.width * exportRatio;
+            let drawH = sig.height * exportRatio;
+            let drawX = sig.x * exportRatio;
+            let drawY = sig.y * exportRatio;
+            
+            if (imgRatio > boxRatio) {
+                drawH = drawW / imgRatio;
+                drawY += (sig.height * exportRatio - drawH) / 2;
+            } else {
+                drawW = drawH * imgRatio;
+                drawX += (sig.width * exportRatio - drawW) / 2;
+            }
+            
+            ctx.drawImage(img, drawX, drawY, drawW, drawH);
           }
           pagesHtml += `<div class="print-page"><img src="${c.toDataURL('image/jpeg', 0.98)}" /></div>`;
         }
@@ -987,12 +1046,28 @@
           const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; const ctx = c.getContext('2d');
           await page.render({ canvasContext: ctx, viewport: vp }).promise;
           
-          // ล็อคสัดส่วนเป๊ะๆ โดยคูณจาก Zoom ปัจจุบัน
           const exportRatio = 3.5 / currentZoom; 
           
           for(const sig of placedSignatures.filter(s => s.page === i)) {
             const img = new Image(); img.src = sig.dataUri; await new Promise(r => img.onload = r);
-            ctx.drawImage(img, sig.x * exportRatio, sig.y * exportRatio, sig.width * exportRatio, sig.height * exportRatio); 
+            
+            // ใช้การคำนวณรักษาสัดส่วนภาพ (Object-contain) เช่นเดียวกับการปริ้นท์
+            const imgRatio = img.width / img.height;
+            const boxRatio = sig.width / sig.height;
+            let drawW = sig.width * exportRatio;
+            let drawH = sig.height * exportRatio;
+            let drawX = sig.x * exportRatio;
+            let drawY = sig.y * exportRatio;
+            
+            if (imgRatio > boxRatio) {
+                drawH = drawW / imgRatio;
+                drawY += (sig.height * exportRatio - drawH) / 2;
+            } else {
+                drawW = drawH * imgRatio;
+                drawX += (sig.width * exportRatio - drawW) / 2;
+            }
+            
+            ctx.drawImage(img, drawX, drawY, drawW, drawH);
           }
           
           const imgData = c.toDataURL('image/jpeg', 0.98); const wPt = vp.width/3.5; const hPt = vp.height/3.5;
